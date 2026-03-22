@@ -1,4 +1,20 @@
 <!DOCTYPE html>
+<!--
+  GymLog — Registro de Treinos
+  ════════════════════════════════════════════════
+  v1.0  Base: registro treino, localStorage
+  v1.1  Supabase sync + offline cache
+  v1.2  Auth e-mail/senha, isolamento por usuário
+  v1.3  Esforço 1–5, PR toast, relatório treinador,
+        peso corporal, humor, esforço no histórico
+  v1.4  YouTube por exercício, instruções editáveis,
+        painel abas (Instruções/YouTube/Anotação),
+        preview de instrução no card, addExPrompt
+        com modal (sem prompt nativo), fix toggleExNote
+  ════════════════════════════════════════════════
+  Layout: dark industrial, Barlow Condensed
+  Stack: HTML+CSS+JS, Supabase, GitHub Pages
+-->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -188,6 +204,31 @@
   .modal{background:var(--surface);border-top:1px solid var(--border);border-radius:16px 16px 0 0;padding:20px;width:100%;max-height:80vh;overflow-y:auto}
   .modal h3{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;text-transform:uppercase;margin-bottom:16px}
 
+  /* ── EXERCISE INFO PANEL ── */
+  .ex-info-panel{padding:10px 16px;border-top:1px solid var(--border);background:rgba(0,0,0,0.08)}
+  .ex-info-tabs{display:flex;gap:0;margin-bottom:10px;border-bottom:1px solid var(--border2)}
+  .ex-info-tab{padding:5px 12px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:none;border:none;color:var(--muted2);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.12s}
+  .ex-info-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+  .ex-info-pane{display:none}.ex-info-pane.active{display:block}
+  .info-label{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+  .yt-preview{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg);border:1px solid var(--border2);border-radius:5px;margin-top:6px;font-size:12px;color:var(--muted);overflow:hidden}
+  .yt-preview a{color:var(--upper);text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+  .instr-chip{display:inline-block;background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);border-radius:4px;padding:4px 9px;font-size:11px;color:var(--upper);margin:2px 2px 2px 0}
+
+  /* ── EFFORT ── */
+  .effort-row{padding:10px 16px 12px;border-top:1px solid var(--border);background:rgba(0,0,0,0.12)}
+  .effort-lbl{font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+  .effort-btns{display:flex;gap:6px}
+  .ebtn{flex:1;padding:8px 4px;border-radius:6px;border:1.5px solid var(--border2);background:none;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--muted2);transition:all 0.12s;display:flex;flex-direction:column;align-items:center;gap:2px;line-height:1}
+  .ebtn .eico{font-size:16px}
+  .ebtn.sel{border-color:var(--warning);background:rgba(255,149,0,0.15);color:var(--warning)}
+  .ebtn:hover{border-color:var(--muted);color:var(--text)}
+  .effort-chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:2px 7px;border-radius:3px;background:rgba(255,149,0,0.15);color:var(--warning)}
+
+  /* ── PR TOAST ── */
+  #pr-toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-100px);background:var(--accent);color:#000;padding:10px 20px;border-radius:8px;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:900;letter-spacing:0.5px;z-index:999;transition:transform 0.4s cubic-bezier(0.34,1.56,0.64,1);white-space:nowrap;pointer-events:none;box-shadow:0 4px 24px rgba(232,255,0,0.3)}
+  #pr-toast.show{transform:translateX(-50%) translateY(0)}
+
   /* ── MISC ── */
   .empty-state{text-align:center;padding:48px 20px;color:var(--muted)}
   .empty-state svg{width:48px;height:48px;margin:0 auto 12px;display:block;opacity:0.3}
@@ -329,6 +370,7 @@
       <div class="flex-between">
         <div><h1 id="det-title">Treino</h1><p id="det-meta"></p></div>
         <div class="flex-gap">
+          <button class="btn btn-secondary btn-sm" onclick="exportTrainerReport(detId)">📤 Relatório</button>
           <button class="btn btn-danger btn-sm" onclick="deleteWorkout()">Excluir</button>
           <button class="btn btn-secondary btn-sm" onclick="goBack()">← Voltar</button>
         </div>
@@ -431,7 +473,11 @@
   <div class="modal">
     <h3>✓ Treino Concluído!</h3>
     <div id="finish-sum" class="card mb-8" style="background:var(--card2)"></div>
-    <div class="field"><label>Observações (opcional)</label><textarea class="input" id="finish-notes" placeholder="Como foi?"></textarea></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div class="field" style="margin:0"><label>Peso corporal (kg)</label><input class="input" type="number" step="0.1" id="finish-bw" placeholder="ex: 82.5"/></div>
+      <div class="field" style="margin:0"><label>Humor geral</label><select class="input" id="finish-mood"><option value="">—</option><option>😴 Cansado</option><option>😐 Normal</option><option>💪 Ótimo</option><option>🔥 No pico</option></select></div>
+    </div>
+    <div class="field"><label>Observações (opcional)</label><textarea class="input" id="finish-notes" placeholder="Como foi? Dores, sensações, ajustes..."></textarea></div>
     <button class="btn btn-primary btn-block" onclick="confirmSave()">Salvar e sincronizar ↑</button>
   </div>
 </div>
@@ -652,37 +698,37 @@ function updateCfgInfo() {
 // ═══════════════════════════════════════════════
 const TPLS = [
   {id:'upper-a',name:'Upper A',type:'upper',label:'Tensão Mecânica',exercises:[
-    {name:'Supino Reto Barra',sets:4,reps:'6–8',rpe:8},
-    {name:'Barra Fixa / Puxada',sets:4,reps:'6–8',rpe:8},
-    {name:'Supino Inclinado Halter',sets:3,reps:'8–10',rpe:8},
-    {name:'Remada Curvada',sets:3,reps:'8–10',rpe:8},
-    {name:'Elevação Lateral',sets:3,reps:'12–15',rpe:8},
-    {name:'Tríceps Corda',sets:3,reps:'10–12',rpe:8},
-    {name:'Bíceps Barra',sets:3,reps:'10–12',rpe:8},
+    {name:'Supino Reto Barra',ytUrl:'https://www.youtube.com/watch?v=rT7DgCr-3pg',instructions:'Banco plano. Barra no rack. Pegada levemente mais larga que os ombros. Escápulas retraídas e fixas. Desça até tocar o peito, suba explosivo.',sets:4,reps:'6–8',rpe:8},
+    {name:'Barra Fixa / Puxada',ytUrl:'https://www.youtube.com/watch?v=eGo4IYlbE5g',instructions:'Barra fixa ou puxada na polia alta. Pegada supinada ou pronada. Puxe os cotovelos para baixo e para trás. Amplitude completa.',sets:4,reps:'6–8',rpe:8},
+    {name:'Supino Inclinado Halter',ytUrl:'https://www.youtube.com/watch?v=DbFgADa2PL8',instructions:'Banco inclinado 30–45°. Halteres alinhados com o peitoral superior. Controle o excêntrico (2–3s).',sets:3,reps:'8–10',rpe:8},
+    {name:'Remada Curvada',ytUrl:'https://www.youtube.com/watch?v=9efgcAjQe7E',instructions:'Tronco inclinado ~45°. Barra puxada em direção ao umbigo. Cotovelos próximos ao corpo. Escápulas no topo.',sets:3,reps:'8–10',rpe:8},
+    {name:'Elevação Lateral',ytUrl:'https://www.youtube.com/watch?v=3VcKaXpzqRo',instructions:'Halteres leves. Suba até 90° (nível dos ombros). Cotovelo levemente flexionado. Fase excêntrica lenta.',sets:3,reps:'12–15',rpe:8},
+    {name:'Tríceps Corda',ytUrl:'https://www.youtube.com/watch?v=vB5OHsJ3EME',instructions:'Polia alta com corda. Cotovelos fixos ao lado do corpo. Extensão completa abrindo a corda no final.',sets:3,reps:'10–12',rpe:8},
+    {name:'Bíceps Barra',ytUrl:'https://www.youtube.com/watch?v=kwG2ipFRgfo',instructions:'Barra W ou reta. Cotovelos fixos. Flexão completa. Não balance o tronco.',sets:3,reps:'10–12',rpe:8},
   ]},
   {id:'lower-a',name:'Lower A',type:'lower',label:'Ênfase Força',exercises:[
-    {name:'Agachamento Livre',sets:4,reps:'6–8',rpe:8},
-    {name:'Terra Romeno (RDL)',sets:3,reps:'6–8',rpe:8},
-    {name:'Leg Press',sets:3,reps:'10–12',rpe:8},
-    {name:'Mesa Flexora',sets:3,reps:'10–12',rpe:8},
-    {name:'Panturrilha',sets:4,reps:'10–15',rpe:8},
-    {name:'Abdômen / Core',sets:3,reps:'12–15',rpe:7},
+    {name:'Agachamento Livre',ytUrl:'https://www.youtube.com/watch?v=ultWZbUMPL8',instructions:'Barra no rack. Posição do agachamento: pés na largura dos ombros, levemente virados para fora. Desça até paralelo ou abaixo. Joelhos seguem a linha dos pés.',sets:4,reps:'6–8',rpe:8},
+    {name:'Terra Romeno (RDL)',ytUrl:'https://www.youtube.com/watch?v=JCXUYuzwNrM',instructions:'Barra ou halteres. Joelhos levemente flexionados e fixos. Quadril vai para trás. Sinta o alongamento dos isquiotibiais. Costas neutras o tempo todo.',sets:3,reps:'6–8',rpe:8},
+    {name:'Leg Press',ytUrl:'https://www.youtube.com/watch?v=IZxyjW7MPJQ',instructions:'Pés na largura dos ombros na plataforma. Desça até 90° nos joelhos. Não trave os joelhos no topo. Ajuste o banco conforme conforto.',sets:3,reps:'10–12',rpe:8},
+    {name:'Mesa Flexora',ytUrl:'https://www.youtube.com/watch?v=Orxowest56U',instructions:'Deite de bruços. Tornozelos sob os rolos. Flexione até 90° ou mais. Fase excêntrica controlada (não deixe cair).',sets:3,reps:'10–12',rpe:8},
+    {name:'Panturrilha',ytUrl:'https://www.youtube.com/watch?v=gwLzBJYoWlI',instructions:'Em pé ou sentado na máquina. Amplitude total: desça até sentir alongamento, suba na ponta dos pés. Pausa de 1s no topo.',sets:4,reps:'10–15',rpe:8},
+    {name:'Abdômen / Core',ytUrl:'https://www.youtube.com/watch?v=DHD1-2P94DI',instructions:'Prancha, abdominal supra ou roda abdominal. Mantenha o core contraído. Não prenda a respiração.',sets:3,reps:'12–15',rpe:7},
   ]},
   {id:'upper-b',name:'Upper B',type:'upper',label:'Ênfase Volume',exercises:[
-    {name:'Supino Inclinado Barra',sets:3,reps:'8–10',rpe:8},
-    {name:'Puxada Alta (Pulldown)',sets:3,reps:'8–10',rpe:8},
-    {name:'Desenvolvimento Halter',sets:3,reps:'8–10',rpe:8},
-    {name:'Remada Baixa / Serrote',sets:3,reps:'10–12',rpe:8},
-    {name:'Crucifixo Halter',sets:3,reps:'12–15',rpe:8},
-    {name:'Bíceps Halter Alternado',sets:3,reps:'10–12',rpe:8},
-    {name:'Tríceps Francês',sets:3,reps:'10–12',rpe:8},
+    {name:'Supino Inclinado Barra',ytUrl:'https://www.youtube.com/watch?v=jPLdzuHckI8',instructions:'Banco inclinado 30–45°. Mesmos princípios do supino plano. Foca no peitoral superior.',sets:3,reps:'8–10',rpe:8},
+    {name:'Puxada Alta (Pulldown)',ytUrl:'https://www.youtube.com/watch?v=CAwf7n6Luuc',instructions:'Polia alta. Pegada pronada levemente mais larga. Puxe até o queixo. Cotovelos apontam para o chão.',sets:3,reps:'8–10',rpe:8},
+    {name:'Desenvolvimento Halter',ytUrl:'https://www.youtube.com/watch?v=qEwKCR5JCog',instructions:'Sentado. Halteres na altura dos ombros. Pressione acima da cabeça sem travar os cotovelos no topo.',sets:3,reps:'8–10',rpe:8},
+    {name:'Remada Baixa / Serrote',ytUrl:'https://www.youtube.com/watch?v=roCP6wCXPqo',instructions:'Polia baixa sentado ou halter unilateral. Puxe o cotovelo para trás maximizando a retração escapular.',sets:3,reps:'10–12',rpe:8},
+    {name:'Crucifixo Halter',ytUrl:'https://www.youtube.com/watch?v=eozdVDA78K0',instructions:'Banco plano. Halteres com cotovelos levemente flexionados. Abra até sentir o alongamento do peitoral. Não force além do conforto.',sets:3,reps:'12–15',rpe:8},
+    {name:'Bíceps Halter Alternado',ytUrl:'https://www.youtube.com/watch?v=sAq_ocpRh_I',instructions:'Em pé ou sentado. Alterne os braços. Supinação no topo do movimento (gire o punho). Cotovelos fixos.',sets:3,reps:'10–12',rpe:8},
+    {name:'Tríceps Francês',ytUrl:'https://www.youtube.com/watch?v=d_KZxkY_0cM',instructions:'Deitado ou sentado. Halter ou barra W. Cotovelos apontados para o teto. Desça atrás da cabeça. Extensão completa.',sets:3,reps:'10–12',rpe:8},
   ]},
   {id:'lower-b',name:'Lower B',type:'lower',label:'Volume/Metabólico',exercises:[
-    {name:'Leg Press / Hack',sets:4,reps:'8–10',rpe:8},
-    {name:'Afundo / Lunges',sets:3,reps:'10–12',rpe:8},
-    {name:'Mesa Flexora',sets:3,reps:'10–12',rpe:8},
-    {name:'Stiff Leve',sets:2,reps:'12',rpe:7},
-    {name:'Panturrilha',sets:4,reps:'12–15',rpe:8},
+    {name:'Leg Press / Hack',ytUrl:'https://www.youtube.com/watch?v=IZxyjW7MPJQ',instructions:'Hack squat ou leg press. Pés médios na plataforma. Amplitude completa sem tirar o quadril do banco.',sets:4,reps:'8–10',rpe:8},
+    {name:'Afundo / Lunges',ytUrl:'https://www.youtube.com/watch?v=QOVaHwm-Q6U',instructions:'Com halteres ou barra. Passo longo. Joelho traseiro quase toca o chão. Tronco ereto. Alterne as pernas.',sets:3,reps:'10–12',rpe:8},
+    {name:'Mesa Flexora',ytUrl:'https://www.youtube.com/watch?v=Orxowest56U',instructions:'Deite de bruços. Tornozelos sob os rolos. Flexione até 90° ou mais. Fase excêntrica controlada (não deixe cair).',sets:3,reps:'10–12',rpe:8},
+    {name:'Stiff Leve',ytUrl:'https://www.youtube.com/watch?v=1uDiW5--rAE',instructions:'Barra ou halteres. Pernas retas (joelho levemente flexionado). Foco no alongamento dos isquiotibiais. Costas neutras.',sets:2,reps:'12',rpe:7},
+    {name:'Panturrilha',ytUrl:'https://www.youtube.com/watch?v=gwLzBJYoWlI',instructions:'Em pé ou sentado na máquina. Amplitude total: desça até sentir alongamento, suba na ponta dos pés. Pausa de 1s no topo.',sets:4,reps:'12–15',rpe:8},
   ]},
 ];
 
@@ -774,9 +820,12 @@ function wCard(w) {
   const tc  = w.templateId ? (w.templateId.includes('upper') ? 'upper' : 'lower') : 'custom';
   const ic  = w.name.split(' ').slice(0,2).map(x=>x[0]).join('').toUpperCase().slice(0,3);
   const ts  = d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  const ef=w.exercises.filter(e=>e.effort>0);
+  const efAvg=ef.length?(ef.reduce((a,e)=>a+e.effort,0)/ef.length).toFixed(1):'—';
+  const efStr=ef.length?' · ⚡'+efAvg+'/5':'';
   return `<div class="history-item" onclick="openDetail('${w.id}')">
     <div class="hi-icon ${tc}">${ic}</div>
-    <div class="hi-info"><div class="hi-title">${w.name}</div><div class="hi-meta">${fmtDate(d)} ${ts} · ${w.exercises.length} ex · ${w.duration||'—'}min</div></div>
+    <div class="hi-info"><div class="hi-title">${w.name}</div><div class="hi-meta">${fmtDate(d)} ${ts} · ${w.exercises.length} ex · ${w.duration||'—'}min${efStr}</div></div>
     <div class="hi-vol"><div class="vol">${vol}</div><div class="unit">kg</div></div>
     <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
   </div>`;
@@ -818,7 +867,7 @@ function startTpl(id) {
   AW = { id:genId(), templateId:t.id, name:t.name+' — '+t.label,
     date:new Date().toISOString(), notes:'',
     exercises: t.exercises.map(ex=>({
-      name:ex.name, hint:ex.reps+' reps · RPE '+ex.rpe, note:'',
+      name:ex.name, hint:ex.reps+' reps · RPE '+ex.rpe, note:'', effort:0, ytUrl:ex.ytUrl||'', instructions:ex.instructions||'',
       sets:Array.from({length:ex.sets},(_,i)=>({idx:i+1,reps:parseInt(ex.reps)||8,weight:lastW(ex.name),rpe:ex.rpe,done:false}))
     }))};
   startActive();
@@ -870,28 +919,56 @@ function renderActive() {
 }
 
 function buildExCard(cont,ex,ei) {
-  const c = document.createElement('div'); c.className='ex-card'; c.id='ec-'+ei;
+  const card = document.createElement('div'); card.className='ex-card'; card.id='ec-'+ei;
   const dn = ex.sets.filter(s=>s.done).length;
-  const ytQ = encodeURIComponent(ex.name+' técnica musculação');
-  c.innerHTML = `
+  const ytFallback = 'https://www.youtube.com/results?search_query='+encodeURIComponent(ex.name+' técnica musculação');
+  const ytHref = ex.ytUrl && ex.ytUrl.trim() ? ex.ytUrl.trim() : ytFallback;
+  const instrPreview = ex.instructions ? `<div class="instr-chip" style="margin-top:6px;max-width:100%;white-space:normal;display:block;font-size:11px;line-height:1.5">${ex.instructions.slice(0,120)}${ex.instructions.length>120?'…':''}</div>` : '';
+  card.innerHTML = `
     <div class="ex-card-hd">
       <div class="flex-between">
-        <div>
+        <div style="min-width:0;flex:1">
           <div class="ex-card-name">${ex.name}</div>
           <div class="text-muted" style="font-size:11px" id="eh-${ei}">${ex.hint||''} · ${dn}/${ex.sets.length} séries</div>
         </div>
-        <div class="flex-gap">
-          <a href="https://www.youtube.com/results?search_query=${ytQ}" target="_blank"
+        <div class="flex-gap" style="flex-shrink:0;margin-left:8px">
+          <a href="${ytHref}" target="_blank" title="Ver no YouTube"
             style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:22px;background:#ff0000;border-radius:4px;text-decoration:none;flex-shrink:0">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
           </a>
-          <button onclick="toggleExNote(${ei})" style="background:none;border:none;cursor:pointer;color:var(--muted);padding:4px" title="Anotação">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          <button onclick="toggleExInfo(${ei})" style="background:none;border:none;cursor:pointer;color:var(--muted);padding:4px" title="Instruções e notas">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
           </button>
         </div>
       </div>
-      <div id="ex-note-box-${ei}" style="${ex.note?'display:block':'display:none'};margin-top:8px">
-        <textarea class="input" rows="2" placeholder="Anotação: sensação, técnica, ajuste..."
+      ${instrPreview}
+    </div>
+    <div id="ex-info-${ei}" class="ex-info-panel" style="display:none">
+      <div class="ex-info-tabs">
+        <button class="ex-info-tab active" onclick="switchExTab(${ei},'instr')">Instruções</button>
+        <button class="ex-info-tab" onclick="switchExTab(${ei},'yt')">YouTube</button>
+        <button class="ex-info-tab" onclick="switchExTab(${ei},'note')">Anotação</button>
+      </div>
+      <div id="ex-pane-instr-${ei}" class="ex-info-pane active">
+        <div class="info-label">Instruções de execução</div>
+        <textarea class="input" rows="3" placeholder="Nome da máquina, número, como executar, ajustes..."
+          oninput="updExInstr(${ei},this.value)"
+          style="font-size:12px;padding:7px 10px;min-height:unset">${ex.instructions||''}</textarea>
+      </div>
+      <div id="ex-pane-yt-${ei}" class="ex-info-pane">
+        <div class="info-label">Link do YouTube (específico)</div>
+        <input class="input" type="url" placeholder="https://youtube.com/watch?v=..."
+          value="${ex.ytUrl||''}"
+          oninput="updExYt(${ei},this.value)"
+          style="font-size:13px;padding:8px 10px"/>
+        <div class="yt-preview">
+          <svg width="16" height="12" viewBox="0 0 24 24" fill="#ff0000"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1C24 15.9 24 12 24 12s0-3.9-.5-5.8z"/><polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02" fill="white"/></svg>
+          <a id="yt-link-${ei}" href="${ex.ytUrl||ytFallback}" target="_blank">${ex.ytUrl||'Busca automática'}</a>
+        </div>
+      </div>
+      <div id="ex-pane-note-${ei}" class="ex-info-pane">
+        <div class="info-label">Anotação da sessão (privada)</div>
+        <textarea class="input" rows="2" placeholder="Sensação, técnica, ajuste desta sessão..."
           oninput="updExNote(${ei},this.value)"
           style="font-size:12px;padding:7px 10px;min-height:unset">${ex.note||''}</textarea>
       </div>
@@ -900,16 +977,48 @@ function buildExCard(cont,ex,ei) {
       <thead><tr><th>#</th><th>kg</th><th>Reps</th><th>RPE</th><th>✓</th></tr></thead>
       <tbody id="sb-${ei}"></tbody>
     </table>
-    <div class="add-set-row"><button class="btn btn-secondary btn-sm" onclick="addSet(${ei})">+ Série</button></div>`;
-  cont.appendChild(c);
+    <div class="add-set-row"><button class="btn btn-secondary btn-sm" onclick="addSet(${ei})">+ Série</button></div>
+    <div class="effort-row" id="ef-${ei}">
+      <div class="effort-lbl">Esforço percebido neste exercício</div>
+      <div class="effort-btns">
+        ${[1,2,3,4,5].map(v=>`<button class="ebtn ${ex.effort===v?'sel':''}" onclick="setEffort(${ei},${v})"><span class="eico">${['😌','🙂','😤','😰','🤯'][v-1]}</span>${v}</button>`).join('')}
+      </div>
+    </div>`;
+  cont.appendChild(card);
   renderSets(ei);
 }
 
+function toggleExInfo(ei) {
+  const panel = document.getElementById('ex-info-'+ei);
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+
+function switchExTab(ei, tab) {
+  ['instr','yt','note'].forEach(t => {
+    document.getElementById('ex-pane-'+t+'-'+ei).classList.toggle('active', t===tab);
+  });
+  const tabs = document.querySelectorAll(`#ex-info-${ei} .ex-info-tab`);
+  const tabMap = ['instr','yt','note'];
+  tabs.forEach((btn,i) => btn.classList.toggle('active', tabMap[i]===tab));
+}
+
+function updExInstr(ei, val) { if (AW) AW.exercises[ei].instructions = val; }
+function updExYt(ei, val) {
+  if (!AW) return;
+  AW.exercises[ei].ytUrl = val;
+  const lnk = document.getElementById('yt-link-'+ei);
+  if (lnk) { lnk.href = val||''; lnk.textContent = val||'Busca automática'; }
+}
+
 function toggleExNote(ei) {
-  const box = document.getElementById('ex-note-box-'+ei);
-  const show = box.style.display === 'none';
-  box.style.display = show ? 'block' : 'none';
-  if (show) box.querySelector('textarea').focus();
+  // opens the info panel directly on the Note tab
+  const panel = document.getElementById('ex-info-'+ei);
+  panel.style.display = 'block';
+  switchExTab(ei, 'note');
+  setTimeout(()=>{
+    const ta = document.querySelector('#ex-pane-note-'+ei+' textarea');
+    if(ta) ta.focus();
+  }, 50);
 }
 
 function updExNote(ei, val) { if (AW) AW.exercises[ei].note = val; }
@@ -936,11 +1045,38 @@ function togSet(ei,si) {
   if(!AW) return;
   const ex=AW.exercises[ei];
   ex.sets[si].done=!ex.sets[si].done;
-  if(ex.sets[si].done) startRest(120);
+  if(ex.sets[si].done){
+    startRest(120);
+    // PR detection
+    const s=ex.sets[si];
+    if(s.weight>0 && s.weight > lastW(ex.name)) showPRToast(ex.name, s.weight);
+  }
   renderSets(ei);
   const dn=ex.sets.filter(s=>s.done).length;
   const eh=document.getElementById('eh-'+ei);
   if(eh) eh.textContent=(ex.hint||'')+' · '+dn+'/'+ex.sets.length+' séries';
+  // refresh effort row
+  const efRow=document.getElementById('ef-'+ei);
+  if(efRow){
+    const btns=efRow.querySelectorAll('.ebtn');
+    btns.forEach((b,i)=>b.classList.toggle('sel', ex.effort===(i+1)));
+  }
+}
+
+function setEffort(ei, val) {
+  if(!AW) return;
+  AW.exercises[ei].effort = val;
+  const efRow=document.getElementById('ef-'+ei);
+  if(efRow){
+    efRow.querySelectorAll('.ebtn').forEach((b,i)=>b.classList.toggle('sel',i+1===val));
+  }
+}
+
+function showPRToast(name, weight) {
+  const t=document.getElementById('pr-toast');
+  t.textContent='🏆 PR! '+name+' — '+weight+'kg';
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 3000);
 }
 
 function addSet(ei) {
@@ -950,10 +1086,25 @@ function addSet(ei) {
   renderSets(ei);
 }
 
-function addExPrompt() {
-  const nm = prompt('Nome do exercício:');
-  if(!nm||!nm.trim()) return;
-  AW.exercises.push({name:nm.trim(),hint:'3×10–12 · RPE 8',note:'',sets:[{idx:1,reps:10,weight:0,rpe:8,done:false}]});
+function addExPrompt() { openM('m-addex'); }
+
+function confirmAddEx() {
+  const nm = document.getElementById('addex-name').value.trim();
+  if (!nm) { document.getElementById('addex-err').textContent='Digite o nome.'; return; }
+  const yt    = document.getElementById('addex-yt').value.trim();
+  const instr = document.getElementById('addex-instr').value.trim();
+  const setsN = parseInt(document.getElementById('addex-sets').value)||3;
+  const repsV = document.getElementById('addex-reps').value.trim()||'10–12';
+  AW.exercises.push({
+    name:nm, hint:repsV+' reps · RPE 8', note:'', effort:0,
+    ytUrl:yt, instructions:instr,
+    sets:Array.from({length:setsN},(_,i)=>({idx:i+1,reps:parseInt(repsV)||10,weight:lastW(nm),rpe:8,done:false}))
+  });
+  ['addex-name','addex-yt','addex-instr'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('addex-sets').value='3';
+  document.getElementById('addex-reps').value='';
+  document.getElementById('addex-err').textContent='';
+  closeM('m-addex');
   renderActive();
 }
 
@@ -981,11 +1132,14 @@ function finishWorkout(){
   clearInterval(timerIv);
   const mins=Math.round(timerSec/60);
   const dn=AW.exercises.reduce((a,ex)=>a+ex.sets.filter(s=>s.done).length,0);
+  const finEf=AW.exercises.filter(e=>e.effort>0);
+  const finEffort=finEf.length?(finEf.reduce((a,e)=>a+e.effort,0)/finEf.length).toFixed(1):'—';
   document.getElementById('finish-sum').innerHTML=`
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center">
-      <div><div class="font-cond" style="font-size:24px;font-weight:900;color:var(--accent)">${mins}</div><div style="font-size:11px;color:var(--muted)">min</div></div>
-      <div><div class="font-cond" style="font-size:24px;font-weight:900;color:var(--accent)">${dn}</div><div style="font-size:11px;color:var(--muted)">séries</div></div>
-      <div><div class="font-cond" style="font-size:24px;font-weight:900;color:var(--accent)">${calcVol(AW)}</div><div style="font-size:11px;color:var(--muted)">kg vol</div></div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center">
+      <div><div class="font-cond" style="font-size:22px;font-weight:900;color:var(--accent)">${mins}</div><div style="font-size:10px;color:var(--muted)">min</div></div>
+      <div><div class="font-cond" style="font-size:22px;font-weight:900;color:var(--accent)">${dn}</div><div style="font-size:10px;color:var(--muted)">séries</div></div>
+      <div><div class="font-cond" style="font-size:22px;font-weight:900;color:var(--accent)">${calcVol(AW)}</div><div style="font-size:10px;color:var(--muted)">kg vol</div></div>
+      <div><div class="font-cond" style="font-size:22px;font-weight:900;color:var(--warning)">${finEffort}</div><div style="font-size:10px;color:var(--muted)">esforço</div></div>
     </div>`;
   document.getElementById('finish-notes').value=AW.notes||'';
   openM('m-finish');
@@ -995,6 +1149,8 @@ async function confirmSave(){
   if(!AW) return;
   AW.duration=Math.round(timerSec/60);
   AW.notes=document.getElementById('finish-notes').value;
+  AW.bodyweight=parseFloat(document.getElementById('finish-bw').value)||null;
+  AW.mood=document.getElementById('finish-mood').value||null;
   const c=getCache(); c.workouts.unshift(AW); setCache(c);
   pushWorkout(AW);
   AW=null; timerSec=0;
@@ -1037,23 +1193,31 @@ function openDetail(id){
   document.getElementById('det-title').textContent=w.name;
   const d=new Date(w.date);
   const ts=d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-  document.getElementById('det-meta').textContent=d.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long'})+' às '+ts+' · '+(w.duration||'—')+' min';
+  const bwStr=w.bodyweight?' · '+w.bodyweight+'kg':'';
+  const moodStr=w.mood?' · '+w.mood:'';
+  document.getElementById('det-meta').textContent=d.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long'})+' às '+ts+' · '+(w.duration||'—')+' min'+bwStr+moodStr;
   const nb=document.getElementById('det-notes-box');
   document.getElementById('det-notes').textContent=w.notes||'';
   nb.style.display=w.notes?'block':'none';
   document.getElementById('det-exs').innerHTML=w.exercises.map(ex=>{
     const chips=ex.sets.filter(s=>s.done).map(s=>`<div class="set-chip">${s.weight||0}kg × ${s.reps}<span class="rpe-lbl"> RPE${s.rpe||'—'}</span></div>`).join('');
-    const ytQ=encodeURIComponent(ex.name+' técnica musculação');
-    const noteHtml=ex.note?`<div style="margin-top:8px;padding:8px 10px;background:var(--card2);border-radius:4px;font-size:12px;color:var(--muted);border-left:2px solid var(--border2)">📝 ${ex.note}</div>`:'';
+    const effortLabels=['','😌 Muito leve','🙂 Leve','😤 Moderado','😰 Pesado','🤯 Muito pesado'];
+    const effortHtml=ex.effort?`<span class="effort-chip">${effortLabels[ex.effort]||ex.effort}</span>`:'';
+    const ytFallback='https://www.youtube.com/results?search_query='+encodeURIComponent(ex.name+' técnica musculação');
+    const ytHref=ex.ytUrl&&ex.ytUrl.trim()?ex.ytUrl.trim():ytFallback;
+    const instrHtml=ex.instructions?`<div style="margin-top:6px;padding:8px 10px;background:var(--card2);border-radius:4px;font-size:12px;color:var(--text);border-left:2px solid rgba(0,212,255,0.3);line-height:1.6">📋 ${ex.instructions}</div>`:'';
+    const noteHtml=ex.note?`<div style="margin-top:6px;padding:8px 10px;background:var(--card2);border-radius:4px;font-size:12px;color:var(--muted);border-left:2px solid var(--border2)">📝 ${ex.note}</div>`:'';
     return `<div class="detail-ex">
       <div class="flex-between mb-8">
         <div class="detail-ex-name" style="margin:0">${ex.name}</div>
-        <a href="https://www.youtube.com/results?search_query=${ytQ}" target="_blank"
+        <a href="${ytHref}" target="_blank"
           style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:22px;background:#ff0000;border-radius:4px;text-decoration:none;flex-shrink:0">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
         </a>
       </div>
-      <div class="sets-disp">${chips||'<span class="text-muted text-sm">—</span>'}</div>
+      <div class="sets-disp" style="margin-bottom:6px">${chips||'<span class="text-muted text-sm">—</span>'}</div>
+      ${effortHtml}
+      ${instrHtml}
       ${noteHtml}
     </div><hr>`;
   }).join('');
@@ -1116,6 +1280,87 @@ function renderProgress(){
       }).join('')}</tbody>
     </table>`;
 }
+
+// ═══════════════════════════════════════════════
+// TRAINER REPORT
+// ═══════════════════════════════════════════════
+const EFFORT_LABELS = ['','😌 Muito leve','🙂 Leve','😤 Moderado','😰 Pesado','🤯 Muito pesado'];
+
+function exportTrainerReport(id) {
+  const {workouts}=getCache();
+  const w=workouts.find(x=>x.id===id); if(!w) return;
+  const d=new Date(w.date);
+  const userName=currentUser?.user_metadata?.name||currentUser?.email||'Atleta';
+
+  // calc summary metrics
+  const doneSets=w.exercises.reduce((a,ex)=>a+ex.sets.filter(s=>s.done).length,0);
+  let totalVol=0; w.exercises.forEach(ex=>ex.sets.forEach(s=>{if(s.done&&s.weight)totalVol+=s.weight*s.reps;}));
+  const allRPE=w.exercises.flatMap(ex=>ex.sets.filter(s=>s.done&&s.rpe).map(s=>s.rpe));
+  const avgRPE=allRPE.length?(allRPE.reduce((a,v)=>a+v,0)/allRPE.length).toFixed(1):'—';
+  const allEffort=w.exercises.filter(ex=>ex.effort>0).map(ex=>ex.effort);
+  const avgEffort=allEffort.length?(allEffort.reduce((a,v)=>a+v,0)/allEffort.length).toFixed(1):'—';
+
+  const exRows=w.exercises.map(ex=>{
+    const done=ex.sets.filter(s=>s.done);
+    const setsStr=done.map(s=>`${s.weight||0}kg×${s.reps} (RPE${s.rpe||'?'})`).join(' | ');
+    const efStr=ex.effort?EFFORT_LABELS[ex.effort]:'—';
+    const noteStr=ex.note?`\n   📝 Anotação: ${ex.note}`:'';
+    const instrStr=ex.instructions?`\n   📋 Instrução: ${ex.instructions}`:'';
+    const ytStr=ex.ytUrl?`\n   ▶ YouTube: ${ex.ytUrl}`:'';
+    return `• ${ex.name}
+   ${setsStr||'—'}
+   Esforço: ${efStr}${instrStr}${noteStr}${ytStr}`;
+  }).join('
+
+');
+
+  const text=`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 RELATÓRIO DE TREINO — GymLog
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Atleta: ${userName}
+Treino: ${w.name}
+Data: ${d.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'})}
+Horário: ${d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}
+Duração: ${w.duration||'—'} min${w.bodyweight?'
+Peso corporal: '+w.bodyweight+' kg':''}${w.mood?'
+Humor: '+w.mood:''}
+
+📊 RESUMO
+Séries concluídas: ${doneSets}
+Volume total: ${totalVol>1000?(totalVol/1000).toFixed(1)+'k':totalVol} kg
+RPE médio: ${avgRPE}
+Esforço médio: ${avgEffort}/5
+
+🏋️ EXERCÍCIOS
+${exRows}${w.notes?'
+
+📝 OBSERVAÇÕES GERAIS
+'+w.notes:''}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Gerado por GymLog`;
+
+  document.getElementById('report-body').innerHTML = '<pre style="white-space:pre-wrap;font-family:monospace;font-size:12px;line-height:1.6;color:var(--text)">'+text+'</pre>';
+  document.getElementById('report-body').dataset.text = text;
+  document.getElementById('copy-ok').textContent='';
+  openM('m-report');
+}
+
+function copyReport() {
+  const text=document.getElementById('report-body').dataset.text;
+  navigator.clipboard.writeText(text).then(()=>{
+    document.getElementById('copy-ok').textContent='✓ Copiado! Cole no WhatsApp ou e-mail.';
+    setTimeout(()=>document.getElementById('copy-ok').textContent='',3000);
+  }).catch(()=>{
+    // fallback: select all text in pre
+    const sel=window.getSelection(); const range=document.createRange();
+    range.selectNodeContents(document.querySelector('#report-body pre'));
+    sel.removeAllRanges(); sel.addRange(range);
+    document.getElementById('copy-ok').textContent='Texto selecionado — Ctrl+C para copiar.';
+  });
+}
+
+function printReport() { window.print(); }
 
 // ═══════════════════════════════════════════════
 // SETTINGS
@@ -1181,5 +1426,56 @@ function pad(n){ return String(n).padStart(2,'0'); }
   });
 })();
 </script>
+
+<!-- ADD EXERCISE MODAL -->
+<div class="modal-overlay" id="m-addex">
+  <div class="modal">
+    <h3>Adicionar Exercício</h3>
+    <div class="field">
+      <label>Nome do exercício *</label>
+      <input class="input" id="addex-name" placeholder="Ex.: Supino Reto Barra" autocomplete="off"/>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="field" style="margin:0">
+        <label>Séries</label>
+        <input class="input" id="addex-sets" type="number" value="3" min="1" max="10"/>
+      </div>
+      <div class="field" style="margin:0">
+        <label>Reps (faixa)</label>
+        <input class="input" id="addex-reps" placeholder="ex: 8–12"/>
+      </div>
+    </div>
+    <div class="field mt-8">
+      <label>Link YouTube (opcional)</label>
+      <input class="input" id="addex-yt" type="url" placeholder="https://youtube.com/watch?v=..."/>
+    </div>
+    <div class="field">
+      <label>Instruções / máquina / ajustes (opcional)</label>
+      <textarea class="input" id="addex-instr" rows="2" placeholder="Nome da máquina, número, como ajustar, pontos de atenção..."></textarea>
+    </div>
+    <p id="addex-err" style="color:var(--danger);font-size:12px;min-height:16px;margin-bottom:8px"></p>
+    <button class="btn btn-primary btn-block" onclick="confirmAddEx()">Adicionar ao treino</button>
+    <button class="btn btn-secondary btn-block mt-8" onclick="closeM('m-addex')">Cancelar</button>
+  </div>
+</div>
+
+<!-- PR TOAST -->
+<div id="pr-toast"></div>
+
+<!-- TRAINER REPORT MODAL -->
+<div class="modal-overlay" id="m-report">
+  <div class="modal" style="max-height:90vh">
+    <div class="flex-between mb-8">
+      <h3 style="margin:0">Relatório para Treinador</h3>
+      <button onclick="closeM('m-report')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:20px">✕</button>
+    </div>
+    <div id="report-body" style="font-size:13px;color:var(--muted);margin-bottom:16px"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-primary btn-sm" onclick="copyReport()">📋 Copiar texto</button>
+      <button class="btn btn-secondary btn-sm" onclick="printReport()">🖨️ Imprimir / PDF</button>
+    </div>
+    <p id="copy-ok" style="font-size:12px;color:var(--success);margin-top:8px;min-height:16px"></p>
+  </div>
+</div>
 </body>
 </html>
