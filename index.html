@@ -7,6 +7,8 @@
   v1.2  Auth e-mail/senha, isolamento por usuário
   v1.3  Esforço 1–5, PR toast, relatório treinador,
         peso corporal, humor, esforço no histórico
+  v1.5  Init blindado com try/catch e fallback,
+        fix show/hide via style.display direto
   v1.4  YouTube por exercício, instruções editáveis,
         painel abas (Instruções/YouTube/Anotação),
         preview de instrução no card, addExPrompt
@@ -1298,57 +1300,62 @@ function exportTrainerReport(id) {
   const d=new Date(w.date);
   const userName=currentUser?.user_metadata?.name||currentUser?.email||'Atleta';
 
-  // calc summary metrics
   const doneSets=w.exercises.reduce((a,ex)=>a+ex.sets.filter(s=>s.done).length,0);
-  let totalVol=0; w.exercises.forEach(ex=>ex.sets.forEach(s=>{if(s.done&&s.weight)totalVol+=s.weight*s.reps;}));
+  let totalVol=0;
+  w.exercises.forEach(ex=>ex.sets.forEach(s=>{if(s.done&&s.weight)totalVol+=s.weight*s.reps;}));
   const allRPE=w.exercises.flatMap(ex=>ex.sets.filter(s=>s.done&&s.rpe).map(s=>s.rpe));
   const avgRPE=allRPE.length?(allRPE.reduce((a,v)=>a+v,0)/allRPE.length).toFixed(1):'—';
   const allEffort=w.exercises.filter(ex=>ex.effort>0).map(ex=>ex.effort);
   const avgEffort=allEffort.length?(allEffort.reduce((a,v)=>a+v,0)/allEffort.length).toFixed(1):'—';
+  const volStr=totalVol>1000?(totalVol/1000).toFixed(1)+'k':String(totalVol);
 
-  const exRows=w.exercises.map(ex=>{
+  const lines = [];
+  lines.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  lines.push('📋 RELATÓRIO DE TREINO — GymLog');
+  lines.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  lines.push('Atleta: ' + userName);
+  lines.push('Treino: ' + w.name);
+  lines.push('Data: ' + d.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}));
+  lines.push('Horário: ' + d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
+  lines.push('Duração: ' + (w.duration||'—') + ' min');
+  if (w.bodyweight) lines.push('Peso corporal: ' + w.bodyweight + ' kg');
+  if (w.mood) lines.push('Humor: ' + w.mood);
+  lines.push('');
+  lines.push('📊 RESUMO');
+  lines.push('Séries concluídas: ' + doneSets);
+  lines.push('Volume total: ' + volStr + ' kg');
+  lines.push('RPE médio: ' + avgRPE);
+  lines.push('Esforço médio: ' + avgEffort + '/5');
+  lines.push('');
+  lines.push('🏋️ EXERCÍCIOS');
+
+  w.exercises.forEach(ex => {
     const done=ex.sets.filter(s=>s.done);
-    const setsStr=done.map(s=>`${s.weight||0}kg×${s.reps} (RPE${s.rpe||'?'})`).join(' | ');
+    const setsStr=done.map(s=>(s.weight||0)+'kg×'+s.reps+' (RPE'+(s.rpe||'?')+')').join(' | ');
     const efStr=ex.effort?EFFORT_LABELS[ex.effort]:'—';
-    const noteStr=ex.note?`\n   📝 Anotação: ${ex.note}`:'';
-    const instrStr=ex.instructions?`\n   📋 Instrução: ${ex.instructions}`:'';
-    const ytStr=ex.ytUrl?`\n   ▶ YouTube: ${ex.ytUrl}`:'';
-    return `• ${ex.name}
-   ${setsStr||'—'}
-   Esforço: ${efStr}${instrStr}${noteStr}${ytStr}`;
-  }).join('
+    lines.push('');
+    lines.push('• ' + ex.name);
+    lines.push('  ' + (setsStr||'—'));
+    lines.push('  Esforço: ' + efStr);
+    if (ex.instructions) lines.push('  📋 ' + ex.instructions);
+    if (ex.note)         lines.push('  📝 ' + ex.note);
+    if (ex.ytUrl)        lines.push('  ▶ ' + ex.ytUrl);
+  });
 
-');
+  if (w.notes) {
+    lines.push('');
+    lines.push('📝 OBSERVAÇÕES GERAIS');
+    lines.push(w.notes);
+  }
 
-  const text=`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📋 RELATÓRIO DE TREINO — GymLog
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Atleta: ${userName}
-Treino: ${w.name}
-Data: ${d.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'})}
-Horário: ${d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}
-Duração: ${w.duration||'—'} min${w.bodyweight?'
-Peso corporal: '+w.bodyweight+' kg':''}${w.mood?'
-Humor: '+w.mood:''}
+  lines.push('');
+  lines.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  lines.push('Gerado por GymLog');
 
-📊 RESUMO
-Séries concluídas: ${doneSets}
-Volume total: ${totalVol>1000?(totalVol/1000).toFixed(1)+'k':totalVol} kg
-RPE médio: ${avgRPE}
-Esforço médio: ${avgEffort}/5
-
-🏋️ EXERCÍCIOS
-${exRows}${w.notes?'
-
-📝 OBSERVAÇÕES GERAIS
-'+w.notes:''}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Gerado por GymLog`;
-
+  const text = lines.join('\n');
   document.getElementById('report-body').innerHTML = '<pre style="white-space:pre-wrap;font-family:monospace;font-size:12px;line-height:1.6;color:var(--text)">'+text+'</pre>';
   document.getElementById('report-body').dataset.text = text;
-  document.getElementById('copy-ok').textContent='';
+  document.getElementById('copy-ok').textContent = '';
   openM('m-report');
 }
 
@@ -1396,40 +1403,61 @@ function pad(n){ return String(n).padStart(2,'0'); }
 // ═══════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════
-(async function(){
-  const cfg = getCfg();
-
-  // 1. Sem config → tela de setup
-  if (!cfg) {
-    show('setup-screen');
-    document.getElementById('app').style.display = 'none';
-    document.getElementById('bottom-nav').style.display = 'none';
-    return;
-  }
-
-  initSB(cfg.url, cfg.key);
-
-  // 2. Esconde app até autenticar
+function showSetup()  { show('setup-screen'); hideApp(); }
+function showLogin()  { show('auth-screen');  hideApp(); }
+function hideApp()    {
   document.getElementById('app').style.display = 'none';
   document.getElementById('bottom-nav').style.display = 'none';
+}
 
-  // 3. Verifica sessão existente
-  const { data: { session } } = await sb.auth.getSession();
-  if (session?.user) {
-    onAuthSuccess(session.user);
-    return;
-  }
+(async function(){
+  // Safety net: if anything throws, fall back to setup screen
+  try {
+    const cfg = getCfg();
 
-  // 4. Sem sessão → tela de login
-  show('auth-screen');
-
-  // 5. Ouve mudanças de auth (ex: confirmação de e-mail em outra aba)
-  sb.auth.onAuthStateChange((_event, session) => {
-    if (session?.user && !currentUser) {
-      hide('auth-screen');
-      onAuthSuccess(session.user);
+    // 1. No config saved → show setup
+    if (!cfg || !cfg.url || !cfg.key) {
+      showSetup();
+      return;
     }
-  });
+
+    initSB(cfg.url, cfg.key);
+    hideApp();
+
+    // 2. Check for existing session
+    let session = null;
+    try {
+      const res = await sb.auth.getSession();
+      session = res?.data?.session;
+    } catch(e) {
+      console.warn('getSession failed:', e.message);
+      // Config might be invalid — show setup again
+      localStorage.removeItem(CFG_KEY);
+      showSetup();
+      return;
+    }
+
+    if (session?.user) {
+      onAuthSuccess(session.user);
+      return;
+    }
+
+    // 3. No session → show login
+    showLogin();
+
+    // 4. Listen for auth changes (email confirm in another tab, etc)
+    sb.auth.onAuthStateChange((_event, newSession) => {
+      if (newSession?.user && !currentUser) {
+        hide('auth-screen');
+        onAuthSuccess(newSession.user);
+      }
+    });
+
+  } catch(e) {
+    console.error('GymLog init error:', e);
+    // Always show something — never leave a blank screen
+    showSetup();
+  }
 })();
 </script>
 
