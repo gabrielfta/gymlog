@@ -8,227 +8,266 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root {
-    --bg: #09090c;
-    --surface: #111116;
-    --card: #16161e;
-    --card2: #1a1a24;
-    --border: #252532;
-    --border2: #2e2e3e;
-    --accent: #e8ff00;
-    --upper: #00d4ff;
-    --lower: #7c4dff;
-    --danger: #ff4f4f;
-    --warning: #ff9500;
-    --success: #4caf72;
-    --text: #e8e8f2;
-    --muted: #70708a;
-    --muted2: #4a4a62;
-    --nav-h: 62px;
+    --bg:#09090c; --surface:#111116; --card:#16161e; --card2:#1a1a24;
+    --border:#252532; --border2:#2e2e3e;
+    --accent:#e8ff00; --upper:#00d4ff; --lower:#7c4dff;
+    --danger:#ff4f4f; --warning:#ff9500; --success:#4caf72;
+    --text:#e8e8f2; --muted:#70708a; --muted2:#4a4a62;
+    --nav-h:62px;
   }
-  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-  html, body { height: 100%; overflow: hidden; }
-  body { background: var(--bg); color: var(--text); font-family: 'Barlow', sans-serif; font-size: 15px; display: flex; flex-direction: column; }
-  #app { flex: 1; overflow-y: auto; padding-bottom: var(--nav-h); }
-  .view { display: none; min-height: calc(100vh - var(--nav-h)); }
-  .view.active { display: block; }
-  .page-header { padding: 20px 20px 12px; border-bottom: 1px solid var(--border); background: var(--bg); position: sticky; top: 0; z-index: 10; }
-  .page-header h1 { font-family: 'Barlow Condensed', sans-serif; font-size: 28px; font-weight: 900; text-transform: uppercase; }
-  .page-header p { color: var(--muted); font-size: 12px; margin-top: 2px; }
-  .content { padding: 16px 20px; }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;overflow:hidden}
+  body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;font-size:15px;display:flex;flex-direction:column}
+  #app{flex:1;overflow-y:auto;padding-bottom:var(--nav-h)}
+  .view{display:none;min-height:calc(100vh - var(--nav-h))}
+  .view.active{display:block}
+  .page-header{padding:20px 20px 12px;border-bottom:1px solid var(--border);background:var(--bg);position:sticky;top:0;z-index:10}
+  .page-header h1{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:900;text-transform:uppercase}
+  .page-header p{color:var(--muted);font-size:12px;margin-top:2px}
+  .content{padding:16px 20px}
 
-  /* SYNC BAR */
-  #sync-bar { display: none; align-items: center; gap: 8px; padding: 8px 20px; font-size: 12px; font-weight: 600; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); }
-  #sync-bar.show { display: flex; }
-  #sync-bar.syncing { background: rgba(232,255,0,0.04); color: var(--accent); }
-  #sync-bar.ok     { background: rgba(76,175,114,0.04); color: var(--success); }
-  #sync-bar.error  { background: rgba(255,79,79,0.04);  color: var(--danger); }
-  .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
-  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
-  .sync-dot.spin { animation: blink 1s ease-in-out infinite; }
+  /* ── AUTH SCREEN ── */
+  #auth-screen{display:none;position:fixed;inset:0;background:var(--bg);z-index:600;align-items:center;justify-content:center;padding:24px}
+  #auth-screen.show{display:flex}
+  .auth-box{max-width:380px;width:100%}
+  .auth-logo{font-family:'Barlow Condensed',sans-serif;font-size:48px;font-weight:900;text-transform:uppercase;margin-bottom:4px}
+  .auth-logo span{color:var(--accent)}
+  .auth-sub{color:var(--muted);font-size:13px;margin-bottom:32px;line-height:1.6}
+  .auth-tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:24px}
+  .auth-tab{flex:1;padding:10px;background:none;border:none;color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s}
+  .auth-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+  .auth-err{color:var(--danger);font-size:12px;min-height:18px;margin-top:8px}
+  .auth-ok{color:var(--success);font-size:12px;min-height:18px;margin-top:8px}
 
-  /* SETUP SCREEN */
-  #setup-screen { display: none; position: fixed; inset: 0; background: var(--bg); z-index: 500; align-items: center; justify-content: center; padding: 24px; }
-  #setup-screen.show { display: flex; }
-  .setup-box { max-width: 400px; width: 100%; }
-  .setup-box h1 { font-family: 'Barlow Condensed', sans-serif; font-size: 42px; font-weight: 900; text-transform: uppercase; margin-bottom: 4px; }
-  .setup-box h1 span { color: var(--accent); }
-  .setup-note { color: var(--muted); font-size: 13px; line-height: 1.6; margin-bottom: 24px; }
-  .setup-step { font-family: 'Barlow Condensed', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent); margin-bottom: 16px; }
+  /* ── SETUP SCREEN (credenciais) ── */
+  #setup-screen{display:none;position:fixed;inset:0;background:var(--bg);z-index:500;align-items:center;justify-content:center;padding:24px}
+  #setup-screen.show{display:flex}
+  .setup-box{max-width:400px;width:100%}
+  .setup-box h1{font-family:'Barlow Condensed',sans-serif;font-size:42px;font-weight:900;text-transform:uppercase;margin-bottom:4px}
+  .setup-box h1 span{color:var(--accent)}
+  .setup-note{color:var(--muted);font-size:13px;line-height:1.6;margin-bottom:24px}
+  .setup-step{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent);margin-bottom:16px}
 
-  /* NAV */
-  #bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: var(--nav-h); background: rgba(9,9,12,0.96); backdrop-filter: blur(12px); border-top: 1px solid var(--border); display: flex; z-index: 100; }
-  .nav-btn { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; background: none; border: none; cursor: pointer; color: var(--muted2); transition: color 0.15s; }
-  .nav-btn.active { color: var(--accent); }
-  .nav-btn svg { width: 22px; height: 22px; }
-  .nav-btn span { font-size: 10px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
+  /* ── SYNC BAR ── */
+  #sync-bar{display:none;align-items:center;gap:8px;padding:8px 20px;font-size:12px;font-weight:600;letter-spacing:0.5px;border-bottom:1px solid var(--border)}
+  #sync-bar.show{display:flex}
+  #sync-bar.syncing{background:rgba(232,255,0,0.04);color:var(--accent)}
+  #sync-bar.ok{background:rgba(76,175,114,0.04);color:var(--success)}
+  #sync-bar.error{background:rgba(255,79,79,0.04);color:var(--danger)}
+  .sync-dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:0.2}}
+  .sync-dot.spin{animation:blink 1s ease-in-out infinite}
 
-  /* COMMON */
-  .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 12px; }
-  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 20px; border-radius: 6px; border: none; font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
-  .btn-primary { background: var(--accent); color: #000; }
-  .btn-secondary { background: var(--card2); color: var(--text); border: 1px solid var(--border2); }
-  .btn-danger { background: rgba(255,79,79,0.15); color: var(--danger); border: 1px solid rgba(255,79,79,0.3); }
-  .btn-success { background: var(--success); color: #fff; }
-  .btn-block { width: 100%; }
-  .btn-sm { padding: 7px 12px; font-size: 12px; }
-  .field { margin-bottom: 14px; }
-  .field label { display: block; font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
-  .input { width: 100%; background: var(--card2); border: 1px solid var(--border2); border-radius: 6px; padding: 10px 12px; color: var(--text); font-family: 'Barlow', sans-serif; font-size: 15px; transition: border-color 0.15s; }
-  .input:focus { outline: none; border-color: var(--accent); }
-  .input::placeholder { color: var(--muted2); }
-  textarea.input { resize: vertical; min-height: 80px; }
-  .tag { display: inline-block; border-radius: 3px; font-size: 11px; font-weight: 700; padding: 2px 7px; }
-  .tag-upper { background: rgba(0,212,255,0.12); color: var(--upper); }
-  .tag-lower { background: rgba(124,77,255,0.12); color: var(--lower); }
-  .tag-custom { background: rgba(232,255,0,0.1); color: var(--accent); }
-  .sec-title { font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin-bottom: 10px; }
-  .flex-between { display: flex; align-items: center; justify-content: space-between; }
-  .flex-gap { display: flex; align-items: center; gap: 8px; }
-  .mt-8 { margin-top: 8px; }
-  .mt-16 { margin-top: 16px; }
-  .mb-8 { margin-bottom: 8px; }
-  .text-muted { color: var(--muted); }
-  .text-sm { font-size: 13px; }
-  .font-cond { font-family: 'Barlow Condensed', sans-serif; }
+  /* ── NAV ── */
+  #bottom-nav{position:fixed;bottom:0;left:0;right:0;height:var(--nav-h);background:rgba(9,9,12,0.96);backdrop-filter:blur(12px);border-top:1px solid var(--border);display:flex;z-index:100}
+  .nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:none;border:none;cursor:pointer;color:var(--muted2);transition:color 0.15s}
+  .nav-btn.active{color:var(--accent)}
+  .nav-btn svg{width:22px;height:22px}
+  .nav-btn span{font-size:10px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase}
 
-  /* HOME */
-  .hero-banner { background: linear-gradient(135deg, #0f0f1a 0%, #0a0a0e 100%); border-bottom: 1px solid var(--border); padding: 24px 20px 20px; position: relative; overflow: hidden; }
-  .hero-banner::after { content: 'LOG'; position: absolute; right: -10px; top: -8px; font-family: 'Barlow Condensed',sans-serif; font-size: 110px; font-weight: 900; color: rgba(255,255,255,0.025); pointer-events: none; }
-  .hero-banner h2 { font-family: 'Barlow Condensed',sans-serif; font-size: 36px; font-weight: 900; text-transform: uppercase; line-height: 1; letter-spacing: -1px; }
-  .hero-banner h2 span { color: var(--accent); }
-  .hero-banner p { color: var(--muted); font-size: 13px; margin-top: 4px; }
-  .stats-strip { display: grid; grid-template-columns: repeat(3,1fr); gap: 1px; background: var(--border); border-bottom: 1px solid var(--border); }
-  .stat-box { background: var(--surface); padding: 14px 16px; text-align: center; }
-  .stat-box .val { font-family: 'Barlow Condensed',sans-serif; font-size: 26px; font-weight: 900; color: var(--accent); line-height: 1; }
-  .stat-box .lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
-  .next-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 12px; }
-  .next-card-hd { padding: 12px 16px; border-bottom: 1px solid var(--border); }
-  .next-card-bd { padding: 14px 16px; }
-  .history-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); cursor: pointer; transition: opacity 0.15s; }
-  .history-item:last-child { border-bottom: none; }
-  .history-item:hover { opacity: 0.8; }
-  .hi-icon { width: 42px; height: 42px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-family: 'Barlow Condensed',sans-serif; font-size: 11px; font-weight: 700; flex-shrink: 0; text-transform: uppercase; }
-  .hi-icon.upper { background: rgba(0,212,255,0.12); color: var(--upper); border: 1px solid rgba(0,212,255,0.2); }
-  .hi-icon.lower { background: rgba(124,77,255,0.12); color: var(--lower); border: 1px solid rgba(124,77,255,0.2); }
-  .hi-icon.custom { background: rgba(232,255,0,0.1); color: var(--accent); border: 1px solid rgba(232,255,0,0.2); }
-  .hi-info { flex: 1; min-width: 0; }
-  .hi-title { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .hi-meta { font-size: 12px; color: var(--muted); margin-top: 1px; }
-  .hi-vol { text-align: right; flex-shrink: 0; }
-  .hi-vol .vol { font-family: 'Barlow Condensed',sans-serif; font-size: 18px; font-weight: 700; color: var(--accent); }
-  .hi-vol .unit { font-size: 10px; color: var(--muted); }
-  .chevron { color: var(--muted2); flex-shrink: 0; }
+  /* ── COMMON ── */
+  .card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:12px}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 20px;border-radius:6px;border:none;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all 0.15s;white-space:nowrap}
+  .btn-primary{background:var(--accent);color:#000}
+  .btn-secondary{background:var(--card2);color:var(--text);border:1px solid var(--border2)}
+  .btn-danger{background:rgba(255,79,79,0.15);color:var(--danger);border:1px solid rgba(255,79,79,0.3)}
+  .btn-success{background:var(--success);color:#fff}
+  .btn-block{width:100%}
+  .btn-sm{padding:7px 12px;font-size:12px}
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+  .input{width:100%;background:var(--card2);border:1px solid var(--border2);border-radius:6px;padding:10px 12px;color:var(--text);font-family:'Barlow',sans-serif;font-size:15px;transition:border-color 0.15s}
+  .input:focus{outline:none;border-color:var(--accent)}
+  .input::placeholder{color:var(--muted2)}
+  textarea.input{resize:vertical;min-height:80px}
+  .tag{display:inline-block;border-radius:3px;font-size:11px;font-weight:700;padding:2px 7px}
+  .tag-upper{background:rgba(0,212,255,0.12);color:var(--upper)}
+  .tag-lower{background:rgba(124,77,255,0.12);color:var(--lower)}
+  .tag-custom{background:rgba(232,255,0,0.1);color:var(--accent)}
+  .sec-title{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:10px}
+  .flex-between{display:flex;align-items:center;justify-content:space-between}
+  .flex-gap{display:flex;align-items:center;gap:8px}
+  .mt-8{margin-top:8px}.mt-16{margin-top:16px}.mb-8{margin-bottom:8px}
+  .text-muted{color:var(--muted)}.text-sm{font-size:13px}
+  .font-cond{font-family:'Barlow Condensed',sans-serif}
 
-  /* TEMPLATES */
-  .tpl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .tpl-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px; cursor: pointer; transition: border-color 0.15s; position: relative; overflow: hidden; }
-  .tpl-card::before { content:''; position: absolute; top:0; left:0; right:0; height:3px; }
-  .tpl-card.upper::before { background: var(--upper); }
-  .tpl-card.lower::before { background: var(--lower); }
-  .tpl-card:hover { border-color: var(--muted2); }
-  .tpl-type { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:6px; }
-  .tpl-card.upper .tpl-type { color: var(--upper); }
-  .tpl-card.lower .tpl-type { color: var(--lower); }
-  .tpl-name { font-family:'Barlow Condensed',sans-serif; font-size:20px; font-weight:900; text-transform:uppercase; line-height:1.1; }
-  .tpl-sub { font-size:11px; color:var(--muted); margin-top:6px; }
+  /* ── HOME ── */
+  .hero-banner{background:linear-gradient(135deg,#0f0f1a 0%,#0a0a0e 100%);border-bottom:1px solid var(--border);padding:24px 20px 20px;position:relative;overflow:hidden}
+  .hero-banner::after{content:'LOG';position:absolute;right:-10px;top:-8px;font-family:'Barlow Condensed',sans-serif;font-size:110px;font-weight:900;color:rgba(255,255,255,0.025);pointer-events:none}
+  .hero-banner h2{font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:900;text-transform:uppercase;line-height:1;letter-spacing:-1px}
+  .hero-banner h2 span{color:var(--accent)}
+  .hero-user{font-size:12px;color:var(--muted);margin-top:4px}
+  .stats-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border-bottom:1px solid var(--border)}
+  .stat-box{background:var(--surface);padding:14px 16px;text-align:center}
+  .stat-box .val{font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:900;color:var(--accent);line-height:1}
+  .stat-box .lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:2px}
+  .next-card{background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:12px}
+  .next-card-hd{padding:12px 16px;border-bottom:1px solid var(--border)}
+  .next-card-bd{padding:14px 16px}
+  .history-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);cursor:pointer;transition:opacity 0.15s}
+  .history-item:last-child{border-bottom:none}
+  .history-item:hover{opacity:0.8}
+  .hi-icon{width:42px;height:42px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;flex-shrink:0;text-transform:uppercase}
+  .hi-icon.upper{background:rgba(0,212,255,0.12);color:var(--upper);border:1px solid rgba(0,212,255,0.2)}
+  .hi-icon.lower{background:rgba(124,77,255,0.12);color:var(--lower);border:1px solid rgba(124,77,255,0.2)}
+  .hi-icon.custom{background:rgba(232,255,0,0.1);color:var(--accent);border:1px solid rgba(232,255,0,0.2)}
+  .hi-info{flex:1;min-width:0}
+  .hi-title{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .hi-meta{font-size:12px;color:var(--muted);margin-top:1px}
+  .hi-vol{text-align:right;flex-shrink:0}
+  .hi-vol .vol{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--accent)}
+  .hi-vol .unit{font-size:10px;color:var(--muted)}
+  .chevron{color:var(--muted2);flex-shrink:0}
 
-  /* ACTIVE */
-  #active-header { background: var(--bg); border-bottom: 1px solid var(--border); padding: 14px 20px; position: sticky; top: 0; z-index: 10; }
-  .timer-disp { font-family:'Barlow Condensed',sans-serif; font-size:22px; font-weight:700; color:var(--accent); letter-spacing:1px; }
-  .active-actions { display: flex; gap: 8px; margin-top: 8px; }
-  .ex-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 12px; }
-  .ex-card-hd { padding: 12px 16px; border-bottom: 1px solid var(--border); background: var(--card2); }
-  .ex-card-name { font-weight: 600; font-size: 15px; }
-  .sets-tbl { width: 100%; border-collapse: collapse; }
-  .sets-tbl th { font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--muted); padding:8px 8px; text-align:center; background:rgba(0,0,0,0.2); }
-  .sets-tbl td { padding:6px 6px; text-align:center; vertical-align:middle; }
-  .sets-tbl tr { border-bottom:1px solid rgba(255,255,255,0.03); }
-  .sets-tbl tr.done-row { background:rgba(76,175,114,0.04); }
-  .num-in { width:60px; background:var(--bg); border:1px solid var(--border2); border-radius:4px; padding:6px 4px; color:var(--text); text-align:center; font-size:15px; font-weight:600; font-family:'Barlow Condensed',sans-serif; }
-  .num-in:focus { outline:none; border-color:var(--accent); }
-  .num-in.wt { width:70px; }
-  .chk-btn { width:32px; height:32px; border-radius:50%; border:2px solid var(--border2); background:none; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.15s; }
-  .chk-btn.done { background:var(--success); border-color:var(--success); }
-  .add-set-row { padding: 8px 16px; }
+  /* ── TEMPLATES ── */
+  .tpl-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .tpl-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px;cursor:pointer;transition:border-color 0.15s;position:relative;overflow:hidden}
+  .tpl-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+  .tpl-card.upper::before{background:var(--upper)}
+  .tpl-card.lower::before{background:var(--lower)}
+  .tpl-card:hover{border-color:var(--muted2)}
+  .tpl-type{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px}
+  .tpl-card.upper .tpl-type{color:var(--upper)}
+  .tpl-card.lower .tpl-type{color:var(--lower)}
+  .tpl-name{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:900;text-transform:uppercase;line-height:1.1}
+  .tpl-sub{font-size:11px;color:var(--muted);margin-top:6px}
 
-  /* REST */
-  #rest-overlay { display:none; position:fixed; inset:0; background:rgba(9,9,12,0.92); backdrop-filter:blur(8px); z-index:200; flex-direction:column; align-items:center; justify-content:center; gap:16px; }
-  #rest-overlay.show { display:flex; }
-  .rest-circle { width:140px; height:140px; border-radius:50%; border:4px solid var(--border); display:flex; flex-direction:column; align-items:center; justify-content:center; background:var(--card); }
-  .rest-time { font-family:'Barlow Condensed',sans-serif; font-size:48px; font-weight:900; color:var(--accent); line-height:1; }
-  .rest-lbl { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; }
+  /* ── ACTIVE ── */
+  #active-header{background:var(--bg);border-bottom:1px solid var(--border);padding:14px 20px;position:sticky;top:0;z-index:10}
+  .timer-disp{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;color:var(--accent);letter-spacing:1px}
+  .active-actions{display:flex;gap:8px;margin-top:8px}
+  .ex-card{background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:12px}
+  .ex-card-hd{padding:12px 16px;border-bottom:1px solid var(--border);background:var(--card2)}
+  .ex-card-name{font-weight:600;font-size:15px}
+  .sets-tbl{width:100%;border-collapse:collapse}
+  .sets-tbl th{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);padding:8px 8px;text-align:center;background:rgba(0,0,0,0.2)}
+  .sets-tbl td{padding:6px 6px;text-align:center;vertical-align:middle}
+  .sets-tbl tr{border-bottom:1px solid rgba(255,255,255,0.03)}
+  .sets-tbl tr.done-row{background:rgba(76,175,114,0.04)}
+  .num-in{width:60px;background:var(--bg);border:1px solid var(--border2);border-radius:4px;padding:6px 4px;color:var(--text);text-align:center;font-size:15px;font-weight:600;font-family:'Barlow Condensed',sans-serif}
+  .num-in:focus{outline:none;border-color:var(--accent)}
+  .num-in.wt{width:70px}
+  .chk-btn{width:32px;height:32px;border-radius:50%;border:2px solid var(--border2);background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s}
+  .chk-btn.done{background:var(--success);border-color:var(--success)}
+  .add-set-row{padding:8px 16px}
 
-  /* HISTORY */
-  .month-hd { font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:var(--muted); padding:8px 0; border-bottom:1px solid var(--border); margin:8px 0 0; }
+  /* ── REST ── */
+  #rest-overlay{display:none;position:fixed;inset:0;background:rgba(9,9,12,0.92);backdrop-filter:blur(8px);z-index:200;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+  #rest-overlay.show{display:flex}
+  .rest-circle{width:140px;height:140px;border-radius:50%;border:4px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--card)}
+  .rest-time{font-family:'Barlow Condensed',sans-serif;font-size:48px;font-weight:900;color:var(--accent);line-height:1}
+  .rest-lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
 
-  /* DETAIL */
-  .detail-ex { margin-bottom: 20px; }
-  .detail-ex-name { font-family:'Barlow Condensed',sans-serif; font-size:18px; font-weight:700; text-transform:uppercase; margin-bottom:8px; }
-  .mb-8 { margin-bottom: 8px; }
-  .sets-disp { display:flex; flex-wrap:wrap; gap:6px; }
-  .set-chip { background:var(--card2); border:1px solid var(--border); border-radius:4px; padding:5px 10px; font-size:13px; font-family:'Barlow Condensed',sans-serif; font-weight:600; }
-  .rpe-lbl { font-size:10px; color:var(--warning); }
+  /* ── HISTORY ── */
+  .month-hd{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);padding:8px 0;border-bottom:1px solid var(--border);margin:8px 0 0}
 
-  /* PROGRESS */
-  .prog-tbl { width:100%; border-collapse:collapse; }
-  .prog-tbl th { font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--muted); padding:8px 12px; text-align:left; border-bottom:1px solid var(--border); }
-  .prog-tbl td { padding:10px 12px; border-bottom:1px solid rgba(255,255,255,0.04); font-size:14px; }
-  .prog-tbl tr:last-child td { border-bottom:none; }
-  .pr-badge { font-size:10px; background:rgba(232,255,0,0.15); color:var(--accent); border-radius:3px; padding:1px 6px; margin-left:4px; }
-  .trend-up { color:var(--success); font-size:12px; }
+  /* ── DETAIL ── */
+  .detail-ex{margin-bottom:20px}
+  .detail-ex-name{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;text-transform:uppercase;margin-bottom:8px}
+  .sets-disp{display:flex;flex-wrap:wrap;gap:6px}
+  .set-chip{background:var(--card2);border:1px solid var(--border);border-radius:4px;padding:5px 10px;font-size:13px;font-family:'Barlow Condensed',sans-serif;font-weight:600}
+  .rpe-lbl{font-size:10px;color:var(--warning)}
 
-  /* SETTINGS */
-  .set-row { display:flex; align-items:center; justify-content:space-between; padding:14px 0; border-bottom:1px solid var(--border); }
-  .set-row:last-child { border-bottom:none; }
-  .set-row-lbl { font-size:14px; font-weight:500; }
-  .set-row-sub { font-size:12px; color:var(--muted); margin-top:2px; }
+  /* ── PROGRESS ── */
+  .prog-tbl{width:100%;border-collapse:collapse}
+  .prog-tbl th{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)}
+  .prog-tbl td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:14px}
+  .prog-tbl tr:last-child td{border-bottom:none}
+  .pr-badge{font-size:10px;background:rgba(232,255,0,0.15);color:var(--accent);border-radius:3px;padding:1px 6px;margin-left:4px}
+  .trend-up{color:var(--success);font-size:12px}
 
-  /* MODAL */
-  .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:300; align-items:flex-end; }
-  .modal-overlay.show { display:flex; }
-  .modal { background:var(--surface); border-top:1px solid var(--border); border-radius:16px 16px 0 0; padding:20px; width:100%; max-height:80vh; overflow-y:auto; }
-  .modal h3 { font-family:'Barlow Condensed',sans-serif; font-size:20px; font-weight:700; text-transform:uppercase; margin-bottom:16px; }
+  /* ── SETTINGS ── */
+  .set-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border)}
+  .set-row:last-child{border-bottom:none}
+  .set-row-lbl{font-size:14px;font-weight:500}
+  .set-row-sub{font-size:12px;color:var(--muted);margin-top:2px}
 
-  /* MISC */
-  .empty-state { text-align:center; padding:48px 20px; color:var(--muted); }
-  .empty-state svg { width:48px; height:48px; margin:0 auto 12px; display:block; opacity:0.3; }
-  hr { border:none; border-top:1px solid var(--border); margin:16px 0; }
+  /* ── MODAL ── */
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:300;align-items:flex-end}
+  .modal-overlay.show{display:flex}
+  .modal{background:var(--surface);border-top:1px solid var(--border);border-radius:16px 16px 0 0;padding:20px;width:100%;max-height:80vh;overflow-y:auto}
+  .modal h3{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;text-transform:uppercase;margin-bottom:16px}
+
+  /* ── MISC ── */
+  .empty-state{text-align:center;padding:48px 20px;color:var(--muted)}
+  .empty-state svg{width:48px;height:48px;margin:0 auto 12px;display:block;opacity:0.3}
+  hr{border:none;border-top:1px solid var(--border);margin:16px 0}
+  .spinner{display:inline-block;width:18px;height:18px;border:2px solid rgba(255,255,255,0.2);border-top-color:currentColor;border-radius:50%;animation:spin 0.7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
 
-<!-- SETUP -->
+<!-- ══ SETUP (credenciais — só na 1ª vez) ══ -->
 <div id="setup-screen">
   <div class="setup-box">
     <h1>Gym<span>Log</span></h1>
-    <p class="setup-note">Configure a conexão com Supabase uma única vez. Os dados ficam salvos na nuvem e sincronizam em todos os seus dispositivos.</p>
-    <div class="setup-step">Credenciais do projeto Supabase</div>
+    <p class="setup-note">Configure a conexão com o Supabase uma única vez neste dispositivo.</p>
+    <div class="setup-step">Credenciais do projeto</div>
     <div class="field">
       <label>Project URL</label>
-      <input class="input" id="setup-url" placeholder="https://xxxxxxxxxxxxxx.supabase.co" autocomplete="off" spellcheck="false"/>
+      <input class="input" id="setup-url" placeholder="https://xxxxxx.supabase.co" autocomplete="off" spellcheck="false"/>
     </div>
     <div class="field">
-      <label>Anon / Public Key</label>
-      <input class="input" id="setup-key" placeholder="eyJhbGciOi..." autocomplete="off" spellcheck="false"/>
+      <label>Publishable / Anon Key</label>
+      <input class="input" id="setup-key" placeholder="sb_publishable_... ou eyJ..." autocomplete="off" spellcheck="false"/>
     </div>
-    <p class="text-muted text-sm mb-8" style="margin-bottom:16px;line-height:1.6">
-      Dashboard Supabase → <strong style="color:var(--text)">Project Settings → API</strong>.<br>
-      Use a chave <strong style="color:var(--text)">anon public</strong> (nunca a service_role).
-    </p>
-    <button class="btn btn-primary btn-block" onclick="saveConfig()">Conectar →</button>
+    <button class="btn btn-primary btn-block" onclick="saveConfig()">Salvar e continuar →</button>
     <p id="setup-err" style="color:var(--danger);font-size:12px;margin-top:10px;min-height:16px"></p>
   </div>
 </div>
 
-<!-- APP -->
+<!-- ══ AUTH (login/cadastro) ══ -->
+<div id="auth-screen">
+  <div class="auth-box">
+    <div class="auth-logo">Gym<span>Log</span></div>
+    <p class="auth-sub">Registre seus treinos e acompanhe a evolução.</p>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">Entrar</button>
+      <button class="auth-tab" id="tab-signup" onclick="switchAuthTab('signup')">Criar conta</button>
+    </div>
+
+    <!-- LOGIN -->
+    <div id="form-login">
+      <div class="field"><label>E-mail</label><input class="input" id="login-email" type="email" placeholder="seu@email.com" autocomplete="email"/></div>
+      <div class="field"><label>Senha</label><input class="input" id="login-pass" type="password" placeholder="••••••••" autocomplete="current-password"/></div>
+      <button class="btn btn-primary btn-block" id="btn-login" onclick="doLogin()">Entrar</button>
+      <p id="login-err" class="auth-err"></p>
+      <p style="text-align:center;margin-top:12px">
+        <button onclick="showForgot()" style="background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;text-decoration:underline">Esqueci a senha</button>
+      </p>
+    </div>
+
+    <!-- SIGNUP -->
+    <div id="form-signup" style="display:none">
+      <div class="field"><label>Nome</label><input class="input" id="signup-name" type="text" placeholder="Seu nome" autocomplete="name"/></div>
+      <div class="field"><label>E-mail</label><input class="input" id="signup-email" type="email" placeholder="seu@email.com" autocomplete="email"/></div>
+      <div class="field"><label>Senha</label><input class="input" id="signup-pass" type="password" placeholder="mínimo 6 caracteres" autocomplete="new-password"/></div>
+      <button class="btn btn-primary btn-block" id="btn-signup" onclick="doSignup()">Criar conta</button>
+      <p id="signup-err" class="auth-err"></p>
+      <p id="signup-ok" class="auth-ok"></p>
+    </div>
+
+    <!-- FORGOT -->
+    <div id="form-forgot" style="display:none">
+      <p class="text-muted text-sm mb-8" style="margin-bottom:14px">Digite seu e-mail para receber o link de redefinição.</p>
+      <div class="field"><label>E-mail</label><input class="input" id="forgot-email" type="email" placeholder="seu@email.com"/></div>
+      <button class="btn btn-primary btn-block" onclick="doForgot()">Enviar link</button>
+      <p id="forgot-msg" class="auth-ok"></p>
+      <p style="margin-top:12px"><button onclick="switchAuthTab('login')" style="background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;text-decoration:underline">← Voltar</button></p>
+    </div>
+  </div>
+</div>
+
+<!-- ══ APP ══ -->
 <div id="app">
-  <div id="sync-bar"><div class="sync-dot" id="sync-dot"></div><span id="sync-msg"></span><button id="retry-btn" style="display:none;margin-left:auto" class="btn btn-secondary btn-sm" onclick="syncFromServer()">↻ Tentar</button></div>
+  <div id="sync-bar"><div class="sync-dot" id="sync-dot"></div><span id="sync-msg"></span><button id="retry-btn" style="display:none;margin-left:auto" class="btn btn-secondary btn-sm" onclick="syncFromServer()">↻</button></div>
 
   <!-- HOME -->
   <div id="view-home" class="view active">
     <div class="hero-banner">
       <h2>Gym<span>Log</span></h2>
-      <p id="home-date"></p>
+      <p class="hero-user" id="hero-user"></p>
     </div>
     <div class="stats-strip">
       <div class="stat-box"><div class="val" id="s-total">0</div><div class="lbl">Treinos</div></div>
@@ -245,16 +284,14 @@
 
   <!-- START -->
   <div id="view-start" class="view">
-    <div class="page-header"><h1>Novo Treino</h1><p>Template ou treino livre</p></div>
+    <div class="page-header"><h1>Novo Treino</h1><p>Template ou livre</p></div>
     <div class="content">
       <div class="sec-title">Templates do programa</div>
       <div class="tpl-grid" id="tpl-grid"></div>
-      <div class="mt-16">
-        <button class="btn btn-secondary btn-block" onclick="startCustom()">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Treino livre
-        </button>
-      </div>
+      <div class="mt-16"><button class="btn btn-secondary btn-block" onclick="startCustom()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Treino livre
+      </button></div>
     </div>
   </div>
 
@@ -299,7 +336,7 @@
     </div>
     <div class="content">
       <div id="det-notes-box" style="display:none" class="card mb-8">
-        <div class="sec-title mb-8">Observações</div>
+        <div class="sec-title mb-8">Observações do treino</div>
         <p id="det-notes" class="text-sm text-muted"></p>
       </div>
       <div class="sec-title">Exercícios</div>
@@ -320,19 +357,26 @@
 
   <!-- SETTINGS -->
   <div id="view-settings" class="view">
-    <div class="page-header"><h1>Config</h1><p>Conexão e dados</p></div>
+    <div class="page-header"><h1>Config</h1></div>
     <div class="content">
-      <div class="sec-title">Supabase</div>
+      <div class="sec-title">Conta</div>
       <div class="card">
-        <div class="set-row"><div><div class="set-row-lbl">Status</div><div class="set-row-sub" id="cfg-status">—</div></div></div>
-        <div class="set-row"><div><div class="set-row-lbl">Projeto</div><div class="set-row-sub" id="cfg-url">—</div></div></div>
-        <div class="set-row"><div><div class="set-row-lbl">Última sync</div><div class="set-row-sub" id="cfg-sync">—</div></div></div>
+        <div class="set-row"><div><div class="set-row-lbl">Usuário</div><div class="set-row-sub" id="cfg-user">—</div></div></div>
+        <div class="set-row"><div><div class="set-row-lbl">Última sync</div><div class="set-row-sub" id="cfg-sync">—</div></div>
+          <button class="btn btn-secondary btn-sm" onclick="syncFromServer()">↻ Sync</button>
+        </div>
+        <div class="set-row"><div><div class="set-row-lbl">Exportar JSON</div><div class="set-row-sub">Backup dos seus treinos</div></div>
+          <button class="btn btn-secondary btn-sm" onclick="exportJSON()">Baixar</button>
+        </div>
+        <div class="set-row"><div><div class="set-row-lbl" style="color:var(--danger)">Sair da conta</div><div class="set-row-sub">Você precisará fazer login novamente</div></div>
+          <button class="btn btn-danger btn-sm" onclick="doLogout()">Sair</button>
+        </div>
       </div>
-      <div class="sec-title mt-16">Ações</div>
+      <div class="sec-title mt-16">Conexão</div>
       <div class="card">
-        <div class="set-row"><div><div class="set-row-lbl">Sincronizar</div><div class="set-row-sub">Buscar todos do servidor</div></div><button class="btn btn-secondary btn-sm" onclick="syncFromServer()">↻ Sync</button></div>
-        <div class="set-row"><div><div class="set-row-lbl">Exportar JSON</div><div class="set-row-sub">Backup completo</div></div><button class="btn btn-secondary btn-sm" onclick="exportJSON()">Baixar</button></div>
-        <div class="set-row"><div><div class="set-row-lbl">Reconfigurar</div><div class="set-row-sub">Trocar URL ou chave</div></div><button class="btn btn-secondary btn-sm" onclick="resetConfig()">Resetar</button></div>
+        <div class="set-row"><div><div class="set-row-lbl">Projeto Supabase</div><div class="set-row-sub" id="cfg-url">—</div></div>
+          <button class="btn btn-secondary btn-sm" onclick="resetConfig()">Trocar</button>
+        </div>
       </div>
     </div>
   </div>
@@ -378,12 +422,11 @@
 <!-- MODALS -->
 <div class="modal-overlay" id="m-notes">
   <div class="modal">
-    <h3>Observações</h3>
+    <h3>Observações do treino</h3>
     <div class="field"><textarea class="input" id="notes-inp" placeholder="Energia, sono, PR, dores..."></textarea></div>
     <button class="btn btn-primary btn-block" onclick="saveNotes()">Salvar</button>
   </div>
 </div>
-
 <div class="modal-overlay" id="m-finish">
   <div class="modal">
     <h3>✓ Treino Concluído!</h3>
@@ -392,7 +435,6 @@
     <button class="btn btn-primary btn-block" onclick="confirmSave()">Salvar e sincronizar ↑</button>
   </div>
 </div>
-
 <div class="modal-overlay" id="m-custom">
   <div class="modal">
     <h3>Treino Livre</h3>
@@ -403,15 +445,20 @@
 </div>
 
 <script>
-// ═══════════════════════════════════
+// ═══════════════════════════════════════════════
 // CONFIG & SUPABASE
-// ═══════════════════════════════════
+// ═══════════════════════════════════════════════
 const CFG_KEY   = 'gymlog_cfg';
-const CACHE_KEY = 'gymlog_data_v2';
+const CACHE_KEY = 'gymlog_data_v3';
 let sb = null;
+let currentUser = null;
 
-function getCfg()       { try { return JSON.parse(localStorage.getItem(CFG_KEY)); } catch(e) { return null; } }
-function setCfg(u,k)    { localStorage.setItem(CFG_KEY, JSON.stringify({url:u,key:k})); }
+function getCfg() { try { return JSON.parse(localStorage.getItem(CFG_KEY)); } catch(e) { return null; } }
+function setCfg(u, k) { localStorage.setItem(CFG_KEY, JSON.stringify({url:u, key:k})); }
+
+function initSB(url, key) {
+  sb = supabase.createClient(url, key);
+}
 
 async function saveConfig() {
   const url = document.getElementById('setup-url').value.trim();
@@ -422,89 +469,187 @@ async function saveConfig() {
   if (!url.startsWith('https://')) { err.textContent = 'URL deve começar com https://'; return; }
   setCfg(url, key);
   initSB(url, key);
+  // test connection
   const { error } = await sb.from('workouts').select('id').limit(1);
-  if (error) {
-    err.textContent = 'Falha: ' + error.message;
+  if (error && error.code !== 'PGRST116' && !error.message.includes('JWT')) {
+    err.textContent = 'Erro: ' + error.message;
     localStorage.removeItem(CFG_KEY); sb = null; return;
   }
-  document.getElementById('setup-screen').classList.remove('show');
-  await syncFromServer();
-  renderHome();
-}
-
-function initSB(url, key) {
-  sb = supabase.createClient(url, key);
+  hide('setup-screen');
+  show('auth-screen');
 }
 
 function resetConfig() {
-  if (!confirm('Reconfigurar credenciais?')) return;
+  if (!confirm('Trocar credenciais? Você precisará fazer login novamente.')) return;
   localStorage.removeItem(CFG_KEY);
+  localStorage.removeItem(CACHE_KEY);
   location.reload();
 }
 
-// ═══════════════════════════════════
-// CACHE
-// ═══════════════════════════════════
-function getCache()    { try { return JSON.parse(localStorage.getItem(CACHE_KEY)) || {workouts:[],lastSync:null}; } catch(e) { return {workouts:[],lastSync:null}; } }
-function setCache(d)   { localStorage.setItem(CACHE_KEY, JSON.stringify(d)); }
+// ═══════════════════════════════════════════════
+// AUTH
+// ═══════════════════════════════════════════════
+function switchAuthTab(tab) {
+  ['login','signup','forgot'].forEach(t => {
+    document.getElementById('form-'+t).style.display = t === tab ? 'block' : 'none';
+  });
+  document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+  document.getElementById('tab-signup').classList.toggle('active', tab === 'signup');
+}
 
-// ═══════════════════════════════════
+function showForgot() {
+  ['login','signup','forgot'].forEach(t => {
+    document.getElementById('form-'+t).style.display = t === 'forgot' ? 'block' : 'none';
+  });
+  document.getElementById('tab-login').classList.remove('active');
+  document.getElementById('tab-signup').classList.remove('active');
+}
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-pass').value;
+  const errEl = document.getElementById('login-err');
+  const btn   = document.getElementById('btn-login');
+  errEl.textContent = '';
+  if (!email || !pass) { errEl.textContent = 'Preencha e-mail e senha.'; return; }
+  btn.innerHTML = '<span class="spinner"></span>';
+  btn.disabled = true;
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+  btn.innerHTML = 'Entrar'; btn.disabled = false;
+  if (error) { errEl.textContent = translateAuthError(error.message); return; }
+  onAuthSuccess(data.user);
+}
+
+async function doSignup() {
+  const name  = document.getElementById('signup-name').value.trim();
+  const email = document.getElementById('signup-email').value.trim();
+  const pass  = document.getElementById('signup-pass').value;
+  const errEl = document.getElementById('signup-err');
+  const okEl  = document.getElementById('signup-ok');
+  const btn   = document.getElementById('btn-signup');
+  errEl.textContent = ''; okEl.textContent = '';
+  if (!email || !pass) { errEl.textContent = 'Preencha e-mail e senha.'; return; }
+  if (pass.length < 6) { errEl.textContent = 'Senha mínimo 6 caracteres.'; return; }
+  btn.innerHTML = '<span class="spinner"></span>';
+  btn.disabled = true;
+  const { data, error } = await sb.auth.signUp({
+    email, password: pass,
+    options: { data: { name: name || email.split('@')[0] } }
+  });
+  btn.innerHTML = 'Criar conta'; btn.disabled = false;
+  if (error) { errEl.textContent = translateAuthError(error.message); return; }
+  // Check if email confirmation is required
+  if (data.user && !data.session) {
+    okEl.textContent = '✓ Conta criada! Verifique seu e-mail para confirmar.';
+  } else if (data.user && data.session) {
+    onAuthSuccess(data.user);
+  }
+}
+
+async function doForgot() {
+  const email = document.getElementById('forgot-email').value.trim();
+  const msg   = document.getElementById('forgot-msg');
+  if (!email) return;
+  const { error } = await sb.auth.resetPasswordForEmail(email);
+  msg.textContent = error ? 'Erro: ' + error.message : '✓ Link enviado para ' + email;
+}
+
+async function doLogout() {
+  if (!confirm('Sair da conta?')) return;
+  await sb.auth.signOut();
+  currentUser = null;
+  localStorage.removeItem(CACHE_KEY);
+  show('auth-screen');
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('bottom-nav').style.display = 'none';
+}
+
+function translateAuthError(msg) {
+  if (msg.includes('Invalid login')) return 'E-mail ou senha incorretos.';
+  if (msg.includes('Email not confirmed')) return 'Confirme seu e-mail antes de entrar.';
+  if (msg.includes('already registered')) return 'Este e-mail já está cadastrado.';
+  if (msg.includes('Password should be')) return 'Senha muito curta (mínimo 6 caracteres).';
+  return msg;
+}
+
+function onAuthSuccess(user) {
+  currentUser = user;
+  hide('auth-screen');
+  document.getElementById('app').style.display = '';
+  document.getElementById('bottom-nav').style.display = '';
+  const name = user.user_metadata?.name || user.email;
+  document.getElementById('hero-user').textContent = '👋 ' + name;
+  document.getElementById('cfg-user').textContent = user.email;
+  renderTpls();
+  syncFromServer().then(() => { renderHome(); renderHistory(); });
+}
+
+// ═══════════════════════════════════════════════
+// CACHE
+// ═══════════════════════════════════════════════
+function getCache()  { try { return JSON.parse(localStorage.getItem(CACHE_KEY)) || {workouts:[],lastSync:null}; } catch(e) { return {workouts:[],lastSync:null}; } }
+function setCache(d) { localStorage.setItem(CACHE_KEY, JSON.stringify(d)); }
+
+// ═══════════════════════════════════════════════
 // SYNC
-// ═══════════════════════════════════
+// ═══════════════════════════════════════════════
 function syncBar(state, msg) {
   const bar = document.getElementById('sync-bar');
   const dot = document.getElementById('sync-dot');
-  const m   = document.getElementById('sync-msg');
-  const rb  = document.getElementById('retry-btn');
+  document.getElementById('sync-msg').textContent = msg;
+  document.getElementById('retry-btn').style.display = state === 'error' ? 'inline-flex' : 'none';
   bar.className = state + ' show';
   dot.className = 'sync-dot' + (state === 'syncing' ? ' spin' : '');
-  m.textContent = msg;
-  rb.style.display = state === 'error' ? 'inline-flex' : 'none';
   if (state === 'ok') setTimeout(() => bar.classList.remove('show'), 3000);
 }
 
 async function syncFromServer() {
-  if (!sb) return;
-  syncBar('syncing','Sincronizando...');
+  if (!sb || !currentUser) return;
+  syncBar('syncing', 'Sincronizando...');
   try {
-    const { data, error } = await sb.from('workouts').select('id,data,created_at').order('created_at',{ascending:false});
+    const { data, error } = await sb.from('workouts')
+      .select('id,data,created_at')
+      .order('created_at', {ascending: false});
     if (error) throw error;
     const workouts = (data||[]).map(r => ({...r.data, id: r.id}));
     const c = getCache(); c.workouts = workouts; c.lastSync = new Date().toISOString(); setCache(c);
-    syncBar('ok', `Sincronizado — ${workouts.length} treinos`);
+    syncBar('ok', `${workouts.length} treinos sincronizados`);
     updateCfgInfo();
   } catch(e) {
-    syncBar('error', 'Erro: ' + (e.message||'desconhecido'));
+    syncBar('error', 'Falha: ' + (e.message||'erro'));
   }
 }
 
 async function pushWorkout(w) {
-  if (!sb) return;
-  syncBar('syncing','Salvando...');
+  if (!sb || !currentUser) return;
+  syncBar('syncing', 'Salvando...');
   try {
-    const { error } = await sb.from('workouts').upsert({id: w.id, data: w});
+    const { error } = await sb.from('workouts').upsert({ id: w.id, user_id: currentUser.id, data: w });
     if (error) throw error;
-    syncBar('ok','Treino salvo ✓');
-  } catch(e) { syncBar('error','Erro ao salvar: '+(e.message||'')); }
+    syncBar('ok', 'Treino salvo ✓');
+  } catch(e) {
+    syncBar('error', 'Erro ao salvar: ' + (e.message||''));
+  }
 }
 
 async function removeRemote(id) {
   if (!sb) return;
   const { error } = await sb.from('workouts').delete().eq('id', id);
-  if (!error) syncBar('ok','Excluído ✓');
-  else syncBar('error','Erro ao excluir');
+  if (!error) syncBar('ok', 'Excluído ✓');
+  else syncBar('error', 'Erro ao excluir');
 }
 
 function updateCfgInfo() {
   const cfg = getCfg(); const c = getCache();
-  document.getElementById('cfg-status').textContent = sb ? '🟢 Conectado' : '🔴 Desconectado';
-  document.getElementById('cfg-url').textContent    = cfg ? cfg.url.replace('https://','').slice(0,44) : '—';
-  document.getElementById('cfg-sync').textContent   = c.lastSync ? new Date(c.lastSync).toLocaleString('pt-BR') : 'Nunca';
+  const url = document.getElementById('cfg-url');
+  const syn = document.getElementById('cfg-sync');
+  if (url) url.textContent = cfg ? cfg.url.replace('https://','').slice(0,44) : '—';
+  if (syn) syn.textContent = c.lastSync ? new Date(c.lastSync).toLocaleString('pt-BR') : 'Nunca';
 }
 
-// ═══════════════════════════════════
+// ═══════════════════════════════════════════════
 // TEMPLATES
-// ═══════════════════════════════════
+// ═══════════════════════════════════════════════
 const TPLS = [
   {id:'upper-a',name:'Upper A',type:'upper',label:'Tensão Mecânica',exercises:[
     {name:'Supino Reto Barra',sets:4,reps:'6–8',rpe:8},
@@ -541,14 +686,14 @@ const TPLS = [
   ]},
 ];
 
-// ═══════════════════════════════════
+// ═══════════════════════════════════════════════
 // NAVIGATION
-// ═══════════════════════════════════
+// ═══════════════════════════════════════════════
 let curView = 'home', prevView = 'home';
 
 function navigate(v) {
   prevView = curView === v ? prevView : curView;
-  curView  = v;
+  curView = v;
   document.querySelectorAll('.view').forEach(x => x.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(x => x.classList.remove('active'));
   document.getElementById('view-'+v).classList.add('active');
@@ -574,16 +719,14 @@ function goBack() {
   navigate(safe.includes(prevView) ? prevView : 'history');
 }
 
-// ═══════════════════════════════════
+function show(id) { document.getElementById(id).classList.add('show'); }
+function hide(id) { document.getElementById(id).classList.remove('show'); }
+
+// ═══════════════════════════════════════════════
 // HOME
-// ═══════════════════════════════════
+// ═══════════════════════════════════════════════
 function renderHome() {
   const {workouts} = getCache();
-  const now = new Date();
-  const DAYS = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
-  const MONS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-  document.getElementById('home-date').textContent = `${DAYS[now.getDay()]}, ${now.getDate()} de ${MONS[now.getMonth()]}`;
-
   document.getElementById('s-total').textContent = workouts.length;
   const ws = new Date(); ws.setDate(ws.getDate()-ws.getDay()); ws.setHours(0,0,0,0);
   document.getElementById('s-week').textContent = workouts.filter(w => new Date(w.date) >= ws).length;
@@ -621,7 +764,7 @@ function renderHome() {
 
   const rl = document.getElementById('recent-list');
   const rec = workouts.slice(0,5);
-  if (!rec.length) { rl.innerHTML = `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg><p>Nenhum treino ainda.</p></div>`; return; }
+  if (!rec.length) { rl.innerHTML = `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg><p>Nenhum treino ainda.<br>Comece agora!</p></div>`; return; }
   rl.innerHTML = rec.map(w => wCard(w)).join('');
 }
 
@@ -630,10 +773,10 @@ function wCard(w) {
   const vol = calcVol(w);
   const tc  = w.templateId ? (w.templateId.includes('upper') ? 'upper' : 'lower') : 'custom';
   const ic  = w.name.split(' ').slice(0,2).map(x=>x[0]).join('').toUpperCase().slice(0,3);
-  const timeStr = d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  const ts  = d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
   return `<div class="history-item" onclick="openDetail('${w.id}')">
     <div class="hi-icon ${tc}">${ic}</div>
-    <div class="hi-info"><div class="hi-title">${w.name}</div><div class="hi-meta">${fmtDate(d)} ${timeStr} · ${w.exercises.length} ex · ${w.duration||'—'}min</div></div>
+    <div class="hi-info"><div class="hi-title">${w.name}</div><div class="hi-meta">${fmtDate(d)} ${ts} · ${w.exercises.length} ex · ${w.duration||'—'}min</div></div>
     <div class="hi-vol"><div class="vol">${vol}</div><div class="unit">kg</div></div>
     <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
   </div>`;
@@ -653,9 +796,9 @@ function fmtDate(d) {
   return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'});
 }
 
-// ═══════════════════════════════════
+// ═══════════════════════════════════════════════
 // TEMPLATES VIEW
-// ═══════════════════════════════════
+// ═══════════════════════════════════════════════
 function renderTpls() {
   document.getElementById('tpl-grid').innerHTML = TPLS.map(t=>`
     <div class="tpl-card ${t.type}" onclick="startTpl('${t.id}')">
@@ -665,18 +808,18 @@ function renderTpls() {
     </div>`).join('');
 }
 
-// ═══════════════════════════════════
+// ═══════════════════════════════════════════════
 // ACTIVE WORKOUT
-// ═══════════════════════════════════
+// ═══════════════════════════════════════════════
 let AW = null, timerIv = null, timerSec = 0, restIv = null, restSec = 0;
 
 function startTpl(id) {
   const t = TPLS.find(x=>x.id===id); if(!t) return;
-  AW = { id: genId(), templateId: t.id, name: t.name+' — '+t.label,
-    date: new Date().toISOString(), notes: '',
+  AW = { id:genId(), templateId:t.id, name:t.name+' — '+t.label,
+    date:new Date().toISOString(), notes:'',
     exercises: t.exercises.map(ex=>({
-      name: ex.name, hint: ex.reps+' reps · RPE '+ex.rpe, note: '',
-      sets: Array.from({length:ex.sets},(_,i)=>({idx:i+1,reps:parseInt(ex.reps)||8,weight:lastW(ex.name),rpe:ex.rpe,done:false}))
+      name:ex.name, hint:ex.reps+' reps · RPE '+ex.rpe, note:'',
+      sets:Array.from({length:ex.sets},(_,i)=>({idx:i+1,reps:parseInt(ex.reps)||8,weight:lastW(ex.name),rpe:ex.rpe,done:false}))
     }))};
   startActive();
 }
@@ -685,14 +828,13 @@ function startCustom() { openM('m-custom'); }
 
 function confirmCustom() {
   const nm = document.getElementById('custom-nm').value.trim() || 'Treino Livre';
-  AW = { id:genId(), templateId:null, name:nm, date:new Date().toISOString(), notes:'', exercises:[] };
+  AW = {id:genId(),templateId:null,name:nm,date:new Date().toISOString(),notes:'',exercises:[]};
   closeM('m-custom');
   startActive();
 }
 
 function startActive() {
-  timerSec = 0;
-  clearInterval(timerIv);
+  timerSec = 0; clearInterval(timerIv);
   timerIv = setInterval(()=>{
     timerSec++;
     const el = document.getElementById('timer');
@@ -706,7 +848,7 @@ function lastW(name) {
   const {workouts} = getCache();
   for (const w of workouts) {
     const ex = w.exercises.find(e=>e.name===name);
-    if (ex) { const s = [...ex.sets].reverse().find(s=>s.done&&s.weight>0); if(s) return s.weight; }
+    if (ex) { const s=[...ex.sets].reverse().find(s=>s.done&&s.weight>0); if(s) return s.weight; }
   }
   return 0;
 }
@@ -722,16 +864,15 @@ function renderActive() {
   const cont = document.getElementById('active-exs');
   cont.innerHTML = '';
   AW.exercises.forEach((ex,ei) => buildExCard(cont,ex,ei));
-  const addBtn = document.createElement('div');
-  addBtn.innerHTML = `<button class="btn btn-secondary btn-block" onclick="addExPrompt()">+ Adicionar exercício</button>`;
-  cont.appendChild(addBtn);
+  const ab = document.createElement('div');
+  ab.innerHTML = `<button class="btn btn-secondary btn-block" onclick="addExPrompt()">+ Adicionar exercício</button>`;
+  cont.appendChild(ab);
 }
 
 function buildExCard(cont,ex,ei) {
   const c = document.createElement('div'); c.className='ex-card'; c.id='ec-'+ei;
   const dn = ex.sets.filter(s=>s.done).length;
-  const ytQ = encodeURIComponent(ex.name + ' técnica musculação');
-  const ytUrl = 'https://www.youtube.com/results?search_query=' + ytQ;
+  const ytQ = encodeURIComponent(ex.name+' técnica musculação');
   c.innerHTML = `
     <div class="ex-card-hd">
       <div class="flex-between">
@@ -740,16 +881,17 @@ function buildExCard(cont,ex,ei) {
           <div class="text-muted" style="font-size:11px" id="eh-${ei}">${ex.hint||''} · ${dn}/${ex.sets.length} séries</div>
         </div>
         <div class="flex-gap">
-          <a href="${ytUrl}" target="_blank" title="Ver no YouTube" style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:22px;background:#ff0000;border-radius:4px;text-decoration:none;flex-shrink:0">
+          <a href="https://www.youtube.com/results?search_query=${ytQ}" target="_blank"
+            style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:22px;background:#ff0000;border-radius:4px;text-decoration:none;flex-shrink:0">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
           </a>
-          <button onclick="toggleExNote(${ei})" title="Anotação" style="background:none;border:none;cursor:pointer;color:var(--muted);padding:4px">
+          <button onclick="toggleExNote(${ei})" style="background:none;border:none;cursor:pointer;color:var(--muted);padding:4px" title="Anotação">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           </button>
         </div>
       </div>
       <div id="ex-note-box-${ei}" style="${ex.note?'display:block':'display:none'};margin-top:8px">
-        <textarea class="input" rows="2" placeholder="Anotação deste exercício (sensação, técnica, ajuste...)"
+        <textarea class="input" rows="2" placeholder="Anotação: sensação, técnica, ajuste..."
           oninput="updExNote(${ei},this.value)"
           style="font-size:12px;padding:7px 10px;min-height:unset">${ex.note||''}</textarea>
       </div>
@@ -770,15 +912,12 @@ function toggleExNote(ei) {
   if (show) box.querySelector('textarea').focus();
 }
 
-function updExNote(ei, val) {
-  if (!AW) return;
-  AW.exercises[ei].note = val;
-}
+function updExNote(ei, val) { if (AW) AW.exercises[ei].note = val; }
 
 function renderSets(ei) {
   const ex = AW && AW.exercises[ei];
   const tb = document.getElementById('sb-'+ei);
-  if(!ex||!tb) return;
+  if (!ex||!tb) return;
   tb.innerHTML = ex.sets.map((s,si)=>`
     <tr class="${s.done?'done-row':''}">
       <td style="color:var(--muted);font-size:12px;width:28px">${s.idx}</td>
@@ -795,18 +934,18 @@ function updSet(ei,si,f,v) { if(!AW) return; const s=AW.exercises[ei].sets[si]; 
 
 function togSet(ei,si) {
   if(!AW) return;
-  const ex = AW.exercises[ei];
-  ex.sets[si].done = !ex.sets[si].done;
+  const ex=AW.exercises[ei];
+  ex.sets[si].done=!ex.sets[si].done;
   if(ex.sets[si].done) startRest(120);
   renderSets(ei);
-  const dn = ex.sets.filter(s=>s.done).length;
-  const eh = document.getElementById('eh-'+ei);
-  if(eh) eh.textContent = (ex.hint||'')+' · '+dn+'/'+ex.sets.length+' séries';
+  const dn=ex.sets.filter(s=>s.done).length;
+  const eh=document.getElementById('eh-'+ei);
+  if(eh) eh.textContent=(ex.hint||'')+' · '+dn+'/'+ex.sets.length+' séries';
 }
 
 function addSet(ei) {
   if(!AW) return;
-  const ex = AW.exercises[ei]; const last = ex.sets[ex.sets.length-1];
+  const ex=AW.exercises[ei]; const last=ex.sets[ex.sets.length-1];
   ex.sets.push({idx:ex.sets.length+1,reps:last?last.reps:8,weight:last?last.weight:0,rpe:8,done:false});
   renderSets(ei);
 }
@@ -814,7 +953,7 @@ function addSet(ei) {
 function addExPrompt() {
   const nm = prompt('Nome do exercício:');
   if(!nm||!nm.trim()) return;
-  AW.exercises.push({name:nm.trim(),hint:'3×10–12 · RPE 8', note:'', sets:[{idx:1,reps:10,weight:0,rpe:8,done:false}]});
+  AW.exercises.push({name:nm.trim(),hint:'3×10–12 · RPE 8',note:'',sets:[{idx:1,reps:10,weight:0,rpe:8,done:false}]});
   renderActive();
 }
 
@@ -840,23 +979,23 @@ function saveNotes(){ if(AW) AW.notes=document.getElementById('notes-inp').value
 function finishWorkout(){
   if(!AW) return;
   clearInterval(timerIv);
-  const mins = Math.round(timerSec/60);
-  const dn = AW.exercises.reduce((a,ex)=>a+ex.sets.filter(s=>s.done).length,0);
+  const mins=Math.round(timerSec/60);
+  const dn=AW.exercises.reduce((a,ex)=>a+ex.sets.filter(s=>s.done).length,0);
   document.getElementById('finish-sum').innerHTML=`
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center">
       <div><div class="font-cond" style="font-size:24px;font-weight:900;color:var(--accent)">${mins}</div><div style="font-size:11px;color:var(--muted)">min</div></div>
       <div><div class="font-cond" style="font-size:24px;font-weight:900;color:var(--accent)">${dn}</div><div style="font-size:11px;color:var(--muted)">séries</div></div>
       <div><div class="font-cond" style="font-size:24px;font-weight:900;color:var(--accent)">${calcVol(AW)}</div><div style="font-size:11px;color:var(--muted)">kg vol</div></div>
     </div>`;
-  document.getElementById('finish-notes').value = AW.notes||'';
+  document.getElementById('finish-notes').value=AW.notes||'';
   openM('m-finish');
 }
 
 async function confirmSave(){
   if(!AW) return;
-  AW.duration = Math.round(timerSec/60);
-  AW.notes    = document.getElementById('finish-notes').value;
-  const c = getCache(); c.workouts.unshift(AW); setCache(c);
+  AW.duration=Math.round(timerSec/60);
+  AW.notes=document.getElementById('finish-notes').value;
+  const c=getCache(); c.workouts.unshift(AW); setCache(c);
   pushWorkout(AW);
   AW=null; timerSec=0;
   closeM('m-finish');
@@ -868,50 +1007,49 @@ function cancelWorkout(){
   clearInterval(timerIv); AW=null; navigate('home');
 }
 
-// ═══════════════════════════════════
+// ═══════════════════════════════════════════════
 // HISTORY
-// ═══════════════════════════════════
+// ═══════════════════════════════════════════════
 function renderHistory(){
-  const {workouts} = getCache();
-  document.getElementById('hist-count').textContent = workouts.length+' treinos';
-  const list = document.getElementById('hist-list');
-  if(!workouts.length){ list.innerHTML=`<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg><p>Sem histórico.</p></div>`; return; }
-  let html='', lastM='';
+  const {workouts}=getCache();
+  document.getElementById('hist-count').textContent=workouts.length+' treinos';
+  const list=document.getElementById('hist-list');
+  if(!workouts.length){ list.innerHTML=`<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg><p>Sem histórico ainda.</p></div>`; return; }
+  let html='',lastM='';
   workouts.forEach(w=>{
-    const d = new Date(w.date);
-    const m = d.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+    const d=new Date(w.date);
+    const m=d.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
     if(m!==lastM){ html+=`<div class="month-hd">${m}</div>`; lastM=m; }
     html+=wCard(w);
   });
   list.innerHTML=html;
 }
 
-// ═══════════════════════════════════
+// ═══════════════════════════════════════════════
 // DETAIL
-// ═══════════════════════════════════
-let detId = null;
+// ═══════════════════════════════════════════════
+let detId=null;
 
 function openDetail(id){
-  prevView = curView;
-  detId = id;
-  const {workouts} = getCache();
-  const w = workouts.find(x=>x.id===id); if(!w) return;
-  document.getElementById('det-title').textContent = w.name;
-  const d = new Date(w.date);
-  const timeStr = d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-  document.getElementById('det-meta').textContent = d.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long'})+' às '+timeStr+' · '+(w.duration||'—')+' min';
-  const nb = document.getElementById('det-notes-box');
-  document.getElementById('det-notes').textContent = w.notes||'';
-  nb.style.display = w.notes ? 'block' : 'none';
-  document.getElementById('det-exs').innerHTML = w.exercises.map(ex=>{
-    const chips = ex.sets.filter(s=>s.done).map(s=>`<div class="set-chip">${s.weight||0}kg × ${s.reps}<span class="rpe-lbl"> RPE${s.rpe||'—'}</span></div>`).join('');
-    const ytQ   = encodeURIComponent(ex.name + ' técnica musculação');
-    const ytUrl = 'https://www.youtube.com/results?search_query=' + ytQ;
-    const noteHtml = ex.note ? `<div style="margin-top:8px;padding:8px 10px;background:var(--card2);border-radius:4px;font-size:12px;color:var(--muted);border-left:2px solid var(--border2)">📝 ${ex.note}</div>` : '';
+  prevView=curView; detId=id;
+  const {workouts}=getCache();
+  const w=workouts.find(x=>x.id===id); if(!w) return;
+  document.getElementById('det-title').textContent=w.name;
+  const d=new Date(w.date);
+  const ts=d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('det-meta').textContent=d.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long'})+' às '+ts+' · '+(w.duration||'—')+' min';
+  const nb=document.getElementById('det-notes-box');
+  document.getElementById('det-notes').textContent=w.notes||'';
+  nb.style.display=w.notes?'block':'none';
+  document.getElementById('det-exs').innerHTML=w.exercises.map(ex=>{
+    const chips=ex.sets.filter(s=>s.done).map(s=>`<div class="set-chip">${s.weight||0}kg × ${s.reps}<span class="rpe-lbl"> RPE${s.rpe||'—'}</span></div>`).join('');
+    const ytQ=encodeURIComponent(ex.name+' técnica musculação');
+    const noteHtml=ex.note?`<div style="margin-top:8px;padding:8px 10px;background:var(--card2);border-radius:4px;font-size:12px;color:var(--muted);border-left:2px solid var(--border2)">📝 ${ex.note}</div>`:'';
     return `<div class="detail-ex">
       <div class="flex-between mb-8">
         <div class="detail-ex-name" style="margin:0">${ex.name}</div>
-        <a href="${ytUrl}" target="_blank" style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:22px;background:#ff0000;border-radius:4px;text-decoration:none;flex-shrink:0">
+        <a href="https://www.youtube.com/results?search_query=${ytQ}" target="_blank"
+          style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:22px;background:#ff0000;border-radius:4px;text-decoration:none;flex-shrink:0">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
         </a>
       </div>
@@ -923,30 +1061,30 @@ function openDetail(id){
 }
 
 async function deleteWorkout(){
-  if(!detId||!confirm('Excluir este treino permanentemente?')) return;
-  const c = getCache(); c.workouts=c.workouts.filter(w=>w.id!==detId); setCache(c);
+  if(!detId||!confirm('Excluir permanentemente?')) return;
+  const c=getCache(); c.workouts=c.workouts.filter(w=>w.id!==detId); setCache(c);
   await removeRemote(detId);
   navigate('history');
 }
 
-// ═══════════════════════════════════
+// ═══════════════════════════════════════════════
 // PROGRESS
-// ═══════════════════════════════════
+// ═══════════════════════════════════════════════
 function renderProgSel(){
-  const {workouts} = getCache();
-  const names = new Set();
+  const {workouts}=getCache();
+  const names=new Set();
   workouts.forEach(w=>w.exercises.forEach(ex=>names.add(ex.name)));
-  const sel = document.getElementById('prog-sel');
-  const cur = sel.value;
-  sel.innerHTML = '<option value="">— Selecione —</option>'+[...names].sort().map(n=>`<option value="${n}" ${n===cur?'selected':''}>${n}</option>`).join('');
+  const sel=document.getElementById('prog-sel');
+  const cur=sel.value;
+  sel.innerHTML='<option value="">— Selecione —</option>'+[...names].sort().map(n=>`<option value="${n}" ${n===cur?'selected':''}>${n}</option>`).join('');
   if(cur) renderProgress();
 }
 
 function renderProgress(){
-  const name = document.getElementById('prog-sel').value;
-  const cont = document.getElementById('prog-content');
+  const name=document.getElementById('prog-sel').value;
+  const cont=document.getElementById('prog-content');
   if(!name){ cont.innerHTML=''; return; }
-  const {workouts} = getCache();
+  const {workouts}=getCache();
   const entries=[];
   workouts.forEach(w=>{
     const ex=w.exercises.find(e=>e.name===name); if(!ex) return;
@@ -954,7 +1092,7 @@ function renderProgress(){
     const maxW=Math.max(...done.map(s=>s.weight));
     entries.push({date:new Date(w.date),maxW,sets:done,wName:w.name});
   });
-  if(!entries.length){ cont.innerHTML=`<div class="empty-state"><p>Sem dados.</p></div>`; return; }
+  if(!entries.length){ cont.innerHTML=`<div class="empty-state"><p>Sem dados para este exercício.</p></div>`; return; }
   const pr=Math.max(...entries.map(e=>e.maxW));
   cont.innerHTML=`
     <div class="card mb-8" style="background:var(--card2)">
@@ -979,9 +1117,9 @@ function renderProgress(){
     </table>`;
 }
 
-// ═══════════════════════════════════
-// SETTINGS ACTIONS
-// ═══════════════════════════════════
+// ═══════════════════════════════════════════════
+// SETTINGS
+// ═══════════════════════════════════════════════
 function exportJSON(){
   const {workouts}=getCache();
   const blob=new Blob([JSON.stringify({workouts},null,2)],{type:'application/json'});
@@ -989,32 +1127,58 @@ function exportJSON(){
   a.download='gymlog_'+new Date().toISOString().split('T')[0]+'.json'; a.click();
 }
 
-// ═══════════════════════════════════
+// ═══════════════════════════════════════════════
 // MODALS
-// ═══════════════════════════════════
+// ═══════════════════════════════════════════════
 function openM(id){ document.getElementById(id).classList.add('show'); }
 function closeM(id){ document.getElementById(id).classList.remove('show'); }
 document.querySelectorAll('.modal-overlay').forEach(el=>{
   el.addEventListener('click',e=>{ if(e.target===el) el.classList.remove('show'); });
 });
 
-// ═══════════════════════════════════
+// ═══════════════════════════════════════════════
 // UTILS
-// ═══════════════════════════════════
+// ═══════════════════════════════════════════════
 function genId(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 function pad(n){ return String(n).padStart(2,'0'); }
 
-// ═══════════════════════════════════
+// ═══════════════════════════════════════════════
 // INIT
-// ═══════════════════════════════════
+// ═══════════════════════════════════════════════
 (async function(){
   const cfg = getCfg();
-  if (!cfg) { document.getElementById('setup-screen').classList.add('show'); return; }
-  document.getElementById('setup-screen').classList.remove('show');
+
+  // 1. Sem config → tela de setup
+  if (!cfg) {
+    show('setup-screen');
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('bottom-nav').style.display = 'none';
+    return;
+  }
+
   initSB(cfg.url, cfg.key);
-  renderTpls();
-  renderHome();
-  syncFromServer().then(()=>{ renderHome(); renderHistory(); });
+
+  // 2. Esconde app até autenticar
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('bottom-nav').style.display = 'none';
+
+  // 3. Verifica sessão existente
+  const { data: { session } } = await sb.auth.getSession();
+  if (session?.user) {
+    onAuthSuccess(session.user);
+    return;
+  }
+
+  // 4. Sem sessão → tela de login
+  show('auth-screen');
+
+  // 5. Ouve mudanças de auth (ex: confirmação de e-mail em outra aba)
+  sb.auth.onAuthStateChange((_event, session) => {
+    if (session?.user && !currentUser) {
+      hide('auth-screen');
+      onAuthSuccess(session.user);
+    }
+  });
 })();
 </script>
 </body>
