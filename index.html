@@ -188,20 +188,6 @@
   .modal{background:var(--surface);border-top:1px solid var(--border);border-radius:16px 16px 0 0;padding:20px;width:100%;max-height:80vh;overflow-y:auto}
   .modal h3{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;text-transform:uppercase;margin-bottom:16px}
 
-  /* ── EFFORT ── */
-  .effort-row{padding:10px 16px 12px;border-top:1px solid var(--border);background:rgba(0,0,0,0.12)}
-  .effort-lbl{font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
-  .effort-btns{display:flex;gap:6px}
-  .ebtn{flex:1;padding:8px 4px;border-radius:6px;border:1.5px solid var(--border2);background:none;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--muted2);transition:all 0.12s;display:flex;flex-direction:column;align-items:center;gap:2px;line-height:1}
-  .ebtn .eico{font-size:16px}
-  .ebtn.sel{border-color:var(--warning);background:rgba(255,149,0,0.15);color:var(--warning)}
-  .ebtn:hover{border-color:var(--muted);color:var(--text)}
-  .effort-chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:2px 7px;border-radius:3px;background:rgba(255,149,0,0.15);color:var(--warning)}
-
-  /* ── PR TOAST ── */
-  #pr-toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-100px);background:var(--accent);color:#000;padding:10px 20px;border-radius:8px;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:900;letter-spacing:0.5px;z-index:999;transition:transform 0.4s cubic-bezier(0.34,1.56,0.64,1);white-space:nowrap;pointer-events:none;box-shadow:0 4px 24px rgba(232,255,0,0.3)}
-  #pr-toast.show{transform:translateX(-50%) translateY(0)}
-
   /* ── MISC ── */
   .empty-state{text-align:center;padding:48px 20px;color:var(--muted)}
   .empty-state svg{width:48px;height:48px;margin:0 auto 12px;display:block;opacity:0.3}
@@ -343,7 +329,6 @@
       <div class="flex-between">
         <div><h1 id="det-title">Treino</h1><p id="det-meta"></p></div>
         <div class="flex-gap">
-          <button class="btn btn-secondary btn-sm" onclick="exportTrainerReport(detId)">📤 Relatório</button>
           <button class="btn btn-danger btn-sm" onclick="deleteWorkout()">Excluir</button>
           <button class="btn btn-secondary btn-sm" onclick="goBack()">← Voltar</button>
         </div>
@@ -446,11 +431,7 @@
   <div class="modal">
     <h3>✓ Treino Concluído!</h3>
     <div id="finish-sum" class="card mb-8" style="background:var(--card2)"></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-      <div class="field" style="margin:0"><label>Peso corporal (kg)</label><input class="input" type="number" step="0.1" id="finish-bw" placeholder="ex: 82.5"/></div>
-      <div class="field" style="margin:0"><label>Humor geral</label><select class="input" id="finish-mood"><option value="">—</option><option>😴 Cansado</option><option>😐 Normal</option><option>💪 Ótimo</option><option>🔥 No pico</option></select></div>
-    </div>
-    <div class="field"><label>Observações (opcional)</label><textarea class="input" id="finish-notes" placeholder="Como foi? Dores, sensações, ajustes..."></textarea></div>
+    <div class="field"><label>Observações (opcional)</label><textarea class="input" id="finish-notes" placeholder="Como foi?"></textarea></div>
     <button class="btn btn-primary btn-block" onclick="confirmSave()">Salvar e sincronizar ↑</button>
   </div>
 </div>
@@ -793,12 +774,9 @@ function wCard(w) {
   const tc  = w.templateId ? (w.templateId.includes('upper') ? 'upper' : 'lower') : 'custom';
   const ic  = w.name.split(' ').slice(0,2).map(x=>x[0]).join('').toUpperCase().slice(0,3);
   const ts  = d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-  const ef=w.exercises.filter(e=>e.effort>0);
-  const efAvg=ef.length?(ef.reduce((a,e)=>a+e.effort,0)/ef.length).toFixed(1):'—';
-  const efStr=ef.length?' · ⚡'+efAvg+'/5':'';
   return `<div class="history-item" onclick="openDetail('${w.id}')">
     <div class="hi-icon ${tc}">${ic}</div>
-    <div class="hi-info"><div class="hi-title">${w.name}</div><div class="hi-meta">${fmtDate(d)} ${ts} · ${w.exercises.length} ex · ${w.duration||'—'}min${efStr}</div></div>
+    <div class="hi-info"><div class="hi-title">${w.name}</div><div class="hi-meta">${fmtDate(d)} ${ts} · ${w.exercises.length} ex · ${w.duration||'—'}min</div></div>
     <div class="hi-vol"><div class="vol">${vol}</div><div class="unit">kg</div></div>
     <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
   </div>`;
@@ -840,7 +818,7 @@ function startTpl(id) {
   AW = { id:genId(), templateId:t.id, name:t.name+' — '+t.label,
     date:new Date().toISOString(), notes:'',
     exercises: t.exercises.map(ex=>({
-      name:ex.name, hint:ex.reps+' reps · RPE '+ex.rpe, note:'', effort:0,
+      name:ex.name, hint:ex.reps+' reps · RPE '+ex.rpe, note:'',
       sets:Array.from({length:ex.sets},(_,i)=>({idx:i+1,reps:parseInt(ex.reps)||8,weight:lastW(ex.name),rpe:ex.rpe,done:false}))
     }))};
   startActive();
@@ -922,13 +900,7 @@ function buildExCard(cont,ex,ei) {
       <thead><tr><th>#</th><th>kg</th><th>Reps</th><th>RPE</th><th>✓</th></tr></thead>
       <tbody id="sb-${ei}"></tbody>
     </table>
-    <div class="add-set-row"><button class="btn btn-secondary btn-sm" onclick="addSet(${ei})">+ Série</button></div>
-    <div class="effort-row" id="ef-${ei}">
-      <div class="effort-lbl">Esforço percebido neste exercício</div>
-      <div class="effort-btns">
-        ${[1,2,3,4,5].map(v=>`<button class="ebtn ${ex.effort===v?'sel':''}" onclick="setEffort(${ei},${v})"><span class="eico">${['😌','🙂','😤','😰','🤯'][v-1]}</span>${v}</button>`).join('')}
-      </div>
-    </div>\`;
+    <div class="add-set-row"><button class="btn btn-secondary btn-sm" onclick="addSet(${ei})">+ Série</button></div>`;
   cont.appendChild(c);
   renderSets(ei);
 }
@@ -964,38 +936,11 @@ function togSet(ei,si) {
   if(!AW) return;
   const ex=AW.exercises[ei];
   ex.sets[si].done=!ex.sets[si].done;
-  if(ex.sets[si].done){
-    startRest(120);
-    // PR detection
-    const s=ex.sets[si];
-    if(s.weight>0 && s.weight > lastW(ex.name)) showPRToast(ex.name, s.weight);
-  }
+  if(ex.sets[si].done) startRest(120);
   renderSets(ei);
   const dn=ex.sets.filter(s=>s.done).length;
   const eh=document.getElementById('eh-'+ei);
   if(eh) eh.textContent=(ex.hint||'')+' · '+dn+'/'+ex.sets.length+' séries';
-  // refresh effort row
-  const efRow=document.getElementById('ef-'+ei);
-  if(efRow){
-    const btns=efRow.querySelectorAll('.ebtn');
-    btns.forEach((b,i)=>b.classList.toggle('sel', ex.effort===(i+1)));
-  }
-}
-
-function setEffort(ei, val) {
-  if(!AW) return;
-  AW.exercises[ei].effort = val;
-  const efRow=document.getElementById('ef-'+ei);
-  if(efRow){
-    efRow.querySelectorAll('.ebtn').forEach((b,i)=>b.classList.toggle('sel',i+1===val));
-  }
-}
-
-function showPRToast(name, weight) {
-  const t=document.getElementById('pr-toast');
-  t.textContent='🏆 PR! '+name+' — '+weight+'kg';
-  t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'), 3000);
 }
 
 function addSet(ei) {
@@ -1008,7 +953,7 @@ function addSet(ei) {
 function addExPrompt() {
   const nm = prompt('Nome do exercício:');
   if(!nm||!nm.trim()) return;
-  AW.exercises.push({name:nm.trim(),hint:'3×10–12 · RPE 8',note:'',effort:0,sets:[{idx:1,reps:10,weight:0,rpe:8,done:false}]});
+  AW.exercises.push({name:nm.trim(),hint:'3×10–12 · RPE 8',note:'',sets:[{idx:1,reps:10,weight:0,rpe:8,done:false}]});
   renderActive();
 }
 
@@ -1036,14 +981,11 @@ function finishWorkout(){
   clearInterval(timerIv);
   const mins=Math.round(timerSec/60);
   const dn=AW.exercises.reduce((a,ex)=>a+ex.sets.filter(s=>s.done).length,0);
-  const finEf=AW.exercises.filter(e=>e.effort>0);
-  const finEffort=finEf.length?(finEf.reduce((a,e)=>a+e.effort,0)/finEf.length).toFixed(1):'—';
   document.getElementById('finish-sum').innerHTML=`
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center">
-      <div><div class="font-cond" style="font-size:22px;font-weight:900;color:var(--accent)">${mins}</div><div style="font-size:10px;color:var(--muted)">min</div></div>
-      <div><div class="font-cond" style="font-size:22px;font-weight:900;color:var(--accent)">${dn}</div><div style="font-size:10px;color:var(--muted)">séries</div></div>
-      <div><div class="font-cond" style="font-size:22px;font-weight:900;color:var(--accent)">${calcVol(AW)}</div><div style="font-size:10px;color:var(--muted)">kg vol</div></div>
-      <div><div class="font-cond" style="font-size:22px;font-weight:900;color:var(--warning)">${finEffort}</div><div style="font-size:10px;color:var(--muted)">esforço</div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center">
+      <div><div class="font-cond" style="font-size:24px;font-weight:900;color:var(--accent)">${mins}</div><div style="font-size:11px;color:var(--muted)">min</div></div>
+      <div><div class="font-cond" style="font-size:24px;font-weight:900;color:var(--accent)">${dn}</div><div style="font-size:11px;color:var(--muted)">séries</div></div>
+      <div><div class="font-cond" style="font-size:24px;font-weight:900;color:var(--accent)">${calcVol(AW)}</div><div style="font-size:11px;color:var(--muted)">kg vol</div></div>
     </div>`;
   document.getElementById('finish-notes').value=AW.notes||'';
   openM('m-finish');
@@ -1053,8 +995,6 @@ async function confirmSave(){
   if(!AW) return;
   AW.duration=Math.round(timerSec/60);
   AW.notes=document.getElementById('finish-notes').value;
-  AW.bodyweight=parseFloat(document.getElementById('finish-bw').value)||null;
-  AW.mood=document.getElementById('finish-mood').value||null;
   const c=getCache(); c.workouts.unshift(AW); setCache(c);
   pushWorkout(AW);
   AW=null; timerSec=0;
@@ -1097,16 +1037,12 @@ function openDetail(id){
   document.getElementById('det-title').textContent=w.name;
   const d=new Date(w.date);
   const ts=d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-  const bwStr=w.bodyweight?' · '+w.bodyweight+'kg':'';
-  const moodStr=w.mood?' · '+w.mood:'';
-  document.getElementById('det-meta').textContent=d.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long'})+' às '+ts+' · '+(w.duration||'—')+' min'+bwStr+moodStr;
+  document.getElementById('det-meta').textContent=d.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long'})+' às '+ts+' · '+(w.duration||'—')+' min';
   const nb=document.getElementById('det-notes-box');
   document.getElementById('det-notes').textContent=w.notes||'';
   nb.style.display=w.notes?'block':'none';
   document.getElementById('det-exs').innerHTML=w.exercises.map(ex=>{
     const chips=ex.sets.filter(s=>s.done).map(s=>`<div class="set-chip">${s.weight||0}kg × ${s.reps}<span class="rpe-lbl"> RPE${s.rpe||'—'}</span></div>`).join('');
-    const effortLabels=['','😌 Muito leve','🙂 Leve','😤 Moderado','😰 Pesado','🤯 Muito pesado'];
-    const effortHtml=ex.effort?`<span class="effort-chip">${effortLabels[ex.effort]||ex.effort}</span>`:'';
     const ytQ=encodeURIComponent(ex.name+' técnica musculação');
     const noteHtml=ex.note?`<div style="margin-top:8px;padding:8px 10px;background:var(--card2);border-radius:4px;font-size:12px;color:var(--muted);border-left:2px solid var(--border2)">📝 ${ex.note}</div>`:'';
     return `<div class="detail-ex">
@@ -1117,8 +1053,7 @@ function openDetail(id){
           <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
         </a>
       </div>
-      <div class="sets-disp" style="margin-bottom:6px">${chips||'<span class="text-muted text-sm">—</span>'}</div>
-      ${effortHtml}
+      <div class="sets-disp">${chips||'<span class="text-muted text-sm">—</span>'}</div>
       ${noteHtml}
     </div><hr>`;
   }).join('');
@@ -1181,86 +1116,6 @@ function renderProgress(){
       }).join('')}</tbody>
     </table>`;
 }
-
-// ═══════════════════════════════════════════════
-// TRAINER REPORT
-// ═══════════════════════════════════════════════
-const EFFORT_LABELS = ['','😌 Muito leve','🙂 Leve','😤 Moderado','😰 Pesado','🤯 Muito pesado'];
-
-function exportTrainerReport(id) {
-  const {workouts}=getCache();
-  const w=workouts.find(x=>x.id===id); if(!w) return;
-  const d=new Date(w.date);
-  const userName=currentUser?.user_metadata?.name||currentUser?.email||'Atleta';
-
-  // calc summary metrics
-  const doneSets=w.exercises.reduce((a,ex)=>a+ex.sets.filter(s=>s.done).length,0);
-  let totalVol=0; w.exercises.forEach(ex=>ex.sets.forEach(s=>{if(s.done&&s.weight)totalVol+=s.weight*s.reps;}));
-  const allRPE=w.exercises.flatMap(ex=>ex.sets.filter(s=>s.done&&s.rpe).map(s=>s.rpe));
-  const avgRPE=allRPE.length?(allRPE.reduce((a,v)=>a+v,0)/allRPE.length).toFixed(1):'—';
-  const allEffort=w.exercises.filter(ex=>ex.effort>0).map(ex=>ex.effort);
-  const avgEffort=allEffort.length?(allEffort.reduce((a,v)=>a+v,0)/allEffort.length).toFixed(1):'—';
-
-  const exRows=w.exercises.map(ex=>{
-    const done=ex.sets.filter(s=>s.done);
-    const setsStr=done.map(s=>`${s.weight||0}kg×${s.reps} (RPE${s.rpe||'?'})`).join(' | ');
-    const efStr=ex.effort?EFFORT_LABELS[ex.effort]:'—';
-    const note=ex.note?`
-   📝 ${ex.note}`:'';
-    return `• ${ex.name}
-   ${setsStr||'—'}
-   Esforço: ${efStr}${note}`;
-  }).join('
-
-');
-
-  const text=`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📋 RELATÓRIO DE TREINO — GymLog
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Atleta: ${userName}
-Treino: ${w.name}
-Data: ${d.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'})}
-Horário: ${d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}
-Duração: ${w.duration||'—'} min${w.bodyweight?'
-Peso corporal: '+w.bodyweight+' kg':''}${w.mood?'
-Humor: '+w.mood:''}
-
-📊 RESUMO
-Séries concluídas: ${doneSets}
-Volume total: ${totalVol>1000?(totalVol/1000).toFixed(1)+'k':totalVol} kg
-RPE médio: ${avgRPE}
-Esforço médio: ${avgEffort}/5
-
-🏋️ EXERCÍCIOS
-${exRows}${w.notes?'
-
-📝 OBSERVAÇÕES GERAIS
-'+w.notes:''}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Gerado por GymLog`;
-
-  document.getElementById('report-body').innerHTML = '<pre style="white-space:pre-wrap;font-family:monospace;font-size:12px;line-height:1.6;color:var(--text)">'+text+'</pre>';
-  document.getElementById('report-body').dataset.text = text;
-  document.getElementById('copy-ok').textContent='';
-  openM('m-report');
-}
-
-function copyReport() {
-  const text=document.getElementById('report-body').dataset.text;
-  navigator.clipboard.writeText(text).then(()=>{
-    document.getElementById('copy-ok').textContent='✓ Copiado! Cole no WhatsApp ou e-mail.';
-    setTimeout(()=>document.getElementById('copy-ok').textContent='',3000);
-  }).catch(()=>{
-    // fallback: select all text in pre
-    const sel=window.getSelection(); const range=document.createRange();
-    range.selectNodeContents(document.querySelector('#report-body pre'));
-    sel.removeAllRanges(); sel.addRange(range);
-    document.getElementById('copy-ok').textContent='Texto selecionado — Ctrl+C para copiar.';
-  });
-}
-
-function printReport() { window.print(); }
 
 // ═══════════════════════════════════════════════
 // SETTINGS
@@ -1326,24 +1181,5 @@ function pad(n){ return String(n).padStart(2,'0'); }
   });
 })();
 </script>
-
-<!-- PR TOAST -->
-<div id="pr-toast"></div>
-
-<!-- TRAINER REPORT MODAL -->
-<div class="modal-overlay" id="m-report">
-  <div class="modal" style="max-height:90vh">
-    <div class="flex-between mb-8">
-      <h3 style="margin:0">Relatório para Treinador</h3>
-      <button onclick="closeM('m-report')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:20px">✕</button>
-    </div>
-    <div id="report-body" style="font-size:13px;color:var(--muted);margin-bottom:16px"></div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn btn-primary btn-sm" onclick="copyReport()">📋 Copiar texto</button>
-      <button class="btn btn-secondary btn-sm" onclick="printReport()">🖨️ Imprimir / PDF</button>
-    </div>
-    <p id="copy-ok" style="font-size:12px;color:var(--success);margin-top:8px;min-height:16px"></p>
-  </div>
-</div>
 </body>
 </html>
