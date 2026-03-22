@@ -340,6 +340,32 @@ input:checked+.slider:before{transform:translateX(20px)}
 .phase-progress-fill{height:100%;border-radius:2px;transition:width .4s}
 .phase-chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;border:1px solid}
 
+/* ===== AUTOCOMPLETE ===== */
+.autocomplete-wrap{position:relative}
+.autocomplete-list{position:absolute;top:100%;left:0;right:0;z-index:400;background:var(--card2);border:1.5px solid var(--primary);border-top:none;border-radius:0 0 var(--rs) var(--rs);max-height:180px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.autocomplete-item{padding:10px 14px;cursor:pointer;font-size:14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.autocomplete-item:last-child{border-bottom:none}
+.autocomplete-item:hover,.autocomplete-item.focused{background:rgba(99,102,241,.15)}
+.autocomplete-group{padding:6px 14px;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);background:rgba(0,0,0,.2);letter-spacing:.05em}
+.ac-muscle{font-size:11px;color:var(--muted)}
+
+/* ===== PROGRAM LIBRARY ===== */
+.lib-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);margin-bottom:12px;overflow:hidden}
+.lib-card-header{padding:14px;border-bottom:1px solid var(--border)}
+.lib-card-name{font-size:17px;font-weight:700}
+.lib-card-meta{font-size:13px;color:var(--muted);margin-top:4px}
+.lib-badge{display:inline-flex;align-items:center;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;border:1px solid}
+.lib-badge-beginner{background:rgba(16,185,129,.1);color:var(--success);border-color:rgba(16,185,129,.3)}
+.lib-badge-intermediate{background:rgba(99,102,241,.1);color:var(--primary);border-color:rgba(99,102,241,.3)}
+.lib-badge-advanced{background:rgba(239,68,68,.1);color:var(--danger);border-color:rgba(239,68,68,.3)}
+.lib-day-row{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background var(--trans)}
+.lib-day-row:last-child{border-bottom:none}
+.lib-day-row:hover{background:var(--card2)}
+.lib-day-num{width:28px;height:28px;border-radius:50%;background:var(--primary);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.lib-day-info{flex:1;min-width:0}
+.lib-day-name{font-weight:600;font-size:14px}
+.lib-day-exercises{font-size:12px;color:var(--muted)}
+
 /* ===== RESPONSIVE ADJUST ===== */
 @media(min-width:480px){
   body{border-left:1px solid var(--border);border-right:1px solid var(--border)}
@@ -490,11 +516,26 @@ input:checked+.slider:before{transform:translateX(20px)}
   <!-- ===== PROGRAMS ===== -->
   <div class="view" id="tab-programs">
     <div class="mt16">
-      <div class="flex between center mb16">
-        <div class="section-title" style="margin:0">Programas</div>
-        <button class="btn btn-sm btn-primary" onclick="openCreateProgram()">+ Novo</button>
+      <!-- Tab switcher: Meus / Biblioteca -->
+      <div class="auth-tabs mb16" style="padding:3px">
+        <button class="auth-tab active" id="prog-tab-mine"  onclick="switchProgTab('mine')">Meus programas</button>
+        <button class="auth-tab"        id="prog-tab-lib"   onclick="switchProgTab('library')">Biblioteca</button>
       </div>
-      <div id="programs-list"></div>
+
+      <!-- Meus programas -->
+      <div id="prog-section-mine">
+        <div class="flex between center mb12">
+          <div class="section-title" style="margin:0">Meus programas</div>
+          <button class="btn btn-sm btn-primary" onclick="openCreateProgram()">+ Novo</button>
+        </div>
+        <div id="programs-list"></div>
+      </div>
+
+      <!-- Biblioteca pública -->
+      <div id="prog-section-lib" class="hide">
+        <div class="muted small mb16">Programas prontos. Toque em um dia para treinar agora, ou copie o programa completo para o seu perfil.</div>
+        <div id="library-list"></div>
+      </div>
     </div>
   </div>
 
@@ -764,6 +805,14 @@ input:checked+.slider:before{transform:translateX(20px)}
       <button class="btn btn-primary btn-block" onclick="confirmAssignProgram()">Atribuir</button>
       <button class="btn btn-ghost btn-block" onclick="closeModal('modal-assign')">Cancelar</button>
     </div>
+  </div>
+</div>
+
+<!-- ===== PROGRAM DETAIL MODAL ===== -->
+<div id="modal-program-detail" class="modal-backdrop">
+  <div class="modal" style="max-height:88vh">
+    <div class="modal-handle"></div>
+    <div id="modal-program-detail-content"></div>
   </div>
 </div>
 
@@ -1352,7 +1401,7 @@ function renderActiveWorkout() {
     <div class="exercise-block">
       <div class="exercise-header">
         <input class="exercise-name-input" type="text" value="${esc(ex.name)}" placeholder="Nome do exercício"
-          oninput="S.activeWorkout.exercises[${ei}].name=this.value" autocomplete="off">
+          data-ei="${ei}" oninput="S.activeWorkout.exercises[${ei}].name=this.value" autocomplete="off">
         <button class="btn btn-icon btn-ghost btn-sm" onclick="removeExercise(${ei})" style="border:none;color:var(--danger)">✕</button>
       </div>
       <table class="sets-table">
@@ -1901,24 +1950,6 @@ async function loadPrograms() {
   renderPrograms();
 }
 
-function renderPrograms() {
-  const el = document.getElementById('programs-list');
-  if(!S.programs.length) {
-    el.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">Nenhum programa</div><div class="empty-text">Crie programas de treino para atribuir a seus alunos.</div></div>`;
-    return;
-  }
-  el.innerHTML = S.programs.map(p => `
-    <div class="card card-hover mb10" onclick="viewProgram('${p.id}')">
-      <div class="flex between center">
-        <div>
-          <div class="bold">${esc(p.name)}</div>
-          <div class="muted small">${esc(p.objective||'')} · ${(p.days||[]).length} dias</div>
-        </div>
-        <button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();openAssignModalProgram('${p.id}')">Atribuir</button>
-      </div>
-    </div>`).join('');
-}
-
 function viewProgram(id) {
   const p = S.programs.find(x=>x.id===id);
   if(!p) return;
@@ -2154,6 +2185,552 @@ async function processPendingInvite() {
   const token = S._pendingInviteToken;
   S._pendingInviteToken = null;
   await acceptInvite(token);
+}
+
+// ================================================================
+// BANCO DE EXERCÍCIOS (estático — sem dependência de banco)
+// ================================================================
+const EXERCISE_BANK = {
+  'Peito': [
+    'Supino Reto Barra','Supino Inclinado Barra','Supino Declinado Barra',
+    'Supino Reto Halteres','Supino Inclinado Halteres',
+    'Crucifixo Reto','Crucifixo Inclinado',
+    'Crossover Cabo (alto)','Crossover Cabo (baixo)',
+    'Peck Deck','Flexão de Braço','Flexão Diamante',
+    'Dips (paralelas) — Peito',
+  ],
+  'Costas': [
+    'Puxada Frontal Pronada','Puxada Frontal Supinada','Puxada Neutra',
+    'Remada Curvada Barra','Remada Curvada Halteres','Remada Unilateral',
+    'Remada Cavalinho','Remada Cabo Baixo','Remada em T',
+    'Barra Fixa Pronada','Barra Fixa Supinada','Barra Fixa Neutra',
+    'Pullover Haltere','Pullover Cabo','Levantamento Terra',
+    'Good Morning','Hiperextensão Lombar',
+  ],
+  'Ombros': [
+    'Desenvolvimento Barra','Desenvolvimento Halteres',
+    'Desenvolvimento Arnold','Elevação Lateral','Elevação Lateral Cabo',
+    'Elevação Frontal Barra','Elevação Frontal Halteres',
+    'Crucifixo Invertido','Remada Alta Barra','Remada Alta Halteres',
+    'Face Pull Cabo','Rotação Externa Cabo',
+  ],
+  'Bíceps': [
+    'Rosca Direta Barra','Rosca Direta Halteres','Rosca Alternada',
+    'Rosca Martelo','Rosca Concentrada','Rosca Scott Barra',
+    'Rosca Scott Halteres','Rosca 21','Rosca Cabo Baixo',
+    'Rosca Inclinada Halteres',
+  ],
+  'Tríceps': [
+    'Tríceps Testa Barra','Tríceps Testa Halteres',
+    'Tríceps Francês Barra','Tríceps Francês Halteres',
+    'Tríceps Corda Cabo','Tríceps Barra Reta Cabo','Tríceps Coice Haltere',
+    'Dips (paralelas) — Tríceps','Tríceps Fechado Barra',
+    'Tríceps Banco','Extensão Unilateral Cabo',
+  ],
+  'Quadríceps': [
+    'Agachamento Livre','Agachamento Hack','Agachamento Smith',
+    'Leg Press 45°','Leg Press Horizontal','Extensão de Perna',
+    'Afundo Barra','Afundo Halteres','Afundo Búlgaro',
+    'Step-up','Agachamento Sumô','Agachamento Frontal',
+  ],
+  'Posterior / Glúteo': [
+    'Stiff Halteres','Stiff Barra','Cadeira Flexora','Mesa Flexora',
+    'Levantamento Terra Romeno','Hip Thrust Barra','Hip Thrust Halteres',
+    'Kickback Cabo','Abdução Cabo','Abdução Máquina',
+    'Agachamento Búlgaro (foco glúteo)','Ponte de Glúteos',
+  ],
+  'Panturrilha': [
+    'Panturrilha em Pé (Calf Raise)','Panturrilha Sentado',
+    'Panturrilha no Leg Press','Donkey Calf Raise',
+  ],
+  'Core / Abdômen': [
+    'Prancha','Abdominal Supra','Abdominal Infra','Abdominal Oblíquo',
+    'Crunch Cabo','Elevação de Pernas Suspenso','Roda Abdominal',
+    'Russian Twist','Dead Bug','Prancha Lateral',
+    'Abdominal Máquina','Vacuum',
+  ],
+  'Cardio / Funcional': [
+    'Corrida Esteira','Bicicleta Ergométrica','Elíptico',
+    'Corda Naval (Battle Rope)','Burpee','Jumping Jack',
+    'Agachamento com Salto','Polichinelo','Mountain Climber',
+  ],
+};
+
+// Flat list for fast search
+const EXERCISE_FLAT = Object.entries(EXERCISE_BANK).flatMap(([group, exs]) =>
+  exs.map(name => ({name, group}))
+);
+
+// ================================================================
+// PROGRAMAS PÚBLICOS (biblioteca embutida)
+// ================================================================
+const PUBLIC_PROGRAMS = [
+  {
+    id: 'pub_fullbody3',
+    name: 'Full Body 3x',
+    objective: 'Base Geral',
+    level: 'beginner',
+    levelLabel: 'Iniciante',
+    freq: '3x / semana',
+    description: 'Treino de corpo inteiro 3 vezes por semana. Ideal para quem está começando ou voltando após pausa. Foco em padrões de movimento fundamentais.',
+    days: [
+      { label: 'Dia A — Empurrar + Puxar',
+        exercises: [
+          {name:'Agachamento Livre',     sets:3, reps:'10-12'},
+          {name:'Supino Reto Barra',     sets:3, reps:'10-12'},
+          {name:'Remada Curvada Barra',  sets:3, reps:'10-12'},
+          {name:'Desenvolvimento Halteres', sets:3, reps:'10-12'},
+          {name:'Rosca Direta Barra',    sets:2, reps:'12'},
+          {name:'Tríceps Corda Cabo',    sets:2, reps:'12'},
+          {name:'Prancha',               sets:3, reps:'30s'},
+        ]},
+      { label: 'Dia B — Força Base',
+        exercises: [
+          {name:'Levantamento Terra',    sets:3, reps:'8'},
+          {name:'Leg Press 45°',         sets:3, reps:'12'},
+          {name:'Supino Inclinado Halteres', sets:3, reps:'10-12'},
+          {name:'Puxada Frontal Pronada',sets:3, reps:'10-12'},
+          {name:'Elevação Lateral',      sets:3, reps:'15'},
+          {name:'Abdominal Supra',       sets:3, reps:'20'},
+        ]},
+      { label: 'Dia C — Composto Total',
+        exercises: [
+          {name:'Afundo Halteres',       sets:3, reps:'10 cada'},
+          {name:'Remada Unilateral',     sets:3, reps:'10 cada'},
+          {name:'Flexão de Braço',       sets:3, reps:'Max'},
+          {name:'Hip Thrust Barra',      sets:3, reps:'12'},
+          {name:'Rosca Martelo',         sets:2, reps:'12'},
+          {name:'Tríceps Testa Barra',   sets:2, reps:'12'},
+          {name:'Prancha Lateral',       sets:2, reps:'30s cada'},
+        ]},
+    ],
+  },
+  {
+    id: 'pub_upperlower4',
+    name: 'Upper / Lower 4x',
+    objective: 'Hipertrofia',
+    level: 'intermediate',
+    levelLabel: 'Intermediário',
+    freq: '4x / semana',
+    description: 'Divisão superior/inferior 4x por semana. Cada grupo muscular é treinado 2x com diferentes estímulos (força + volume). Protocolo eficiente para hipertrofia.',
+    days: [
+      { label: 'Upper A — Força',
+        exercises: [
+          {name:'Supino Reto Barra',      sets:4, reps:'5-6'},
+          {name:'Remada Curvada Barra',   sets:4, reps:'5-6'},
+          {name:'Desenvolvimento Barra',  sets:3, reps:'6-8'},
+          {name:'Puxada Frontal Pronada', sets:3, reps:'6-8'},
+          {name:'Rosca Direta Barra',     sets:3, reps:'8-10'},
+          {name:'Tríceps Testa Barra',    sets:3, reps:'8-10'},
+        ]},
+      { label: 'Lower A — Força',
+        exercises: [
+          {name:'Agachamento Livre',      sets:4, reps:'5-6'},
+          {name:'Levantamento Terra Romeno', sets:3, reps:'6-8'},
+          {name:'Leg Press 45°',          sets:3, reps:'8-10'},
+          {name:'Cadeira Flexora',        sets:3, reps:'10-12'},
+          {name:'Panturrilha em Pé (Calf Raise)', sets:4, reps:'12-15'},
+        ]},
+      { label: 'Upper B — Volume',
+        exercises: [
+          {name:'Supino Inclinado Halteres', sets:4, reps:'10-12'},
+          {name:'Remada Unilateral',      sets:4, reps:'10-12'},
+          {name:'Elevação Lateral',       sets:4, reps:'15-20'},
+          {name:'Face Pull Cabo',         sets:3, reps:'15'},
+          {name:'Rosca Alternada',        sets:3, reps:'12'},
+          {name:'Tríceps Corda Cabo',     sets:3, reps:'12-15'},
+          {name:'Crucifixo Reto',         sets:3, reps:'12-15'},
+        ]},
+      { label: 'Lower B — Volume',
+        exercises: [
+          {name:'Leg Press 45°',          sets:4, reps:'12-15'},
+          {name:'Stiff Halteres',         sets:4, reps:'12-15'},
+          {name:'Afundo Búlgaro',         sets:3, reps:'10-12 cada'},
+          {name:'Extensão de Perna',      sets:3, reps:'15'},
+          {name:'Hip Thrust Barra',       sets:3, reps:'12-15'},
+          {name:'Panturrilha Sentado',    sets:4, reps:'15-20'},
+        ]},
+    ],
+  },
+  {
+    id: 'pub_abc3',
+    name: 'ABC 3x',
+    objective: 'Hipertrofia',
+    level: 'intermediate',
+    levelLabel: 'Intermediário',
+    freq: '3-6x / semana',
+    description: 'Divisão clássica A-B-C. Pode ser feita 3x (um ciclo) ou 6x (dois ciclos). Cada sessão treina grupos complementares com alto volume.',
+    days: [
+      { label: 'Dia A — Peito + Bíceps',
+        exercises: [
+          {name:'Supino Reto Barra',          sets:4, reps:'8-10'},
+          {name:'Supino Inclinado Halteres',  sets:3, reps:'10-12'},
+          {name:'Crucifixo Reto',             sets:3, reps:'12-15'},
+          {name:'Crossover Cabo (alto)',       sets:3, reps:'15'},
+          {name:'Rosca Direta Barra',         sets:4, reps:'8-10'},
+          {name:'Rosca Scott Halteres',       sets:3, reps:'10-12'},
+          {name:'Rosca Martelo',              sets:3, reps:'12'},
+        ]},
+      { label: 'Dia B — Costas + Tríceps',
+        exercises: [
+          {name:'Levantamento Terra',         sets:4, reps:'6-8'},
+          {name:'Puxada Frontal Pronada',     sets:4, reps:'8-10'},
+          {name:'Remada Curvada Barra',       sets:4, reps:'8-10'},
+          {name:'Remada Unilateral',          sets:3, reps:'10-12'},
+          {name:'Pullover Haltere',           sets:3, reps:'12'},
+          {name:'Tríceps Testa Barra',        sets:4, reps:'10-12'},
+          {name:'Tríceps Corda Cabo',         sets:3, reps:'12-15'},
+          {name:'Dips (paralelas) — Tríceps', sets:3, reps:'Max'},
+        ]},
+      { label: 'Dia C — Pernas + Ombros',
+        exercises: [
+          {name:'Agachamento Livre',          sets:4, reps:'8-10'},
+          {name:'Leg Press 45°',              sets:4, reps:'10-12'},
+          {name:'Stiff Halteres',             sets:3, reps:'10-12'},
+          {name:'Extensão de Perna',          sets:3, reps:'15'},
+          {name:'Cadeira Flexora',            sets:3, reps:'12-15'},
+          {name:'Hip Thrust Barra',           sets:3, reps:'12'},
+          {name:'Desenvolvimento Arnold',     sets:4, reps:'10-12'},
+          {name:'Elevação Lateral',           sets:4, reps:'15-20'},
+          {name:'Face Pull Cabo',             sets:3, reps:'15'},
+          {name:'Panturrilha em Pé (Calf Raise)', sets:4, reps:'15-20'},
+        ]},
+    ],
+  },
+  {
+    id: 'pub_ppl6',
+    name: 'Push Pull Legs 6x',
+    objective: 'Hipertrofia Avançada',
+    level: 'advanced',
+    levelLabel: 'Avançado',
+    freq: '6x / semana',
+    description: 'PPL clássico em 6 dias. Alta frequência, volume máximo por grupo muscular. Cada padrão de movimento (empurrar / puxar / pernas) é treinado 2x por semana.',
+    days: [
+      { label: 'Push A — Peito + Ombro + Tríceps (Força)',
+        exercises: [
+          {name:'Supino Reto Barra',           sets:4, reps:'4-6'},
+          {name:'Desenvolvimento Barra',       sets:4, reps:'6-8'},
+          {name:'Supino Inclinado Halteres',   sets:3, reps:'8-10'},
+          {name:'Elevação Lateral',            sets:4, reps:'15-20'},
+          {name:'Tríceps Testa Barra',         sets:3, reps:'8-10'},
+          {name:'Tríceps Corda Cabo',          sets:3, reps:'12'},
+        ]},
+      { label: 'Pull A — Costas + Bíceps (Força)',
+        exercises: [
+          {name:'Levantamento Terra',          sets:4, reps:'4-6'},
+          {name:'Barra Fixa Pronada',          sets:4, reps:'6-8'},
+          {name:'Remada Curvada Barra',        sets:4, reps:'6-8'},
+          {name:'Face Pull Cabo',              sets:3, reps:'15'},
+          {name:'Rosca Direta Barra',          sets:3, reps:'8-10'},
+          {name:'Rosca Martelo',               sets:3, reps:'10'},
+        ]},
+      { label: 'Legs A — Quadríceps (Força)',
+        exercises: [
+          {name:'Agachamento Livre',           sets:4, reps:'4-6'},
+          {name:'Leg Press 45°',               sets:4, reps:'8-10'},
+          {name:'Extensão de Perna',           sets:3, reps:'12-15'},
+          {name:'Levantamento Terra Romeno',   sets:3, reps:'8-10'},
+          {name:'Cadeira Flexora',             sets:3, reps:'12'},
+          {name:'Panturrilha em Pé (Calf Raise)', sets:4, reps:'12-15'},
+        ]},
+      { label: 'Push B — Peito + Ombro + Tríceps (Volume)',
+        exercises: [
+          {name:'Supino Inclinado Barra',      sets:4, reps:'8-10'},
+          {name:'Crossover Cabo (alto)',        sets:4, reps:'12-15'},
+          {name:'Desenvolvimento Arnold',      sets:4, reps:'10-12'},
+          {name:'Elevação Lateral Cabo',       sets:4, reps:'15-20'},
+          {name:'Crucifixo Reto',              sets:3, reps:'12-15'},
+          {name:'Tríceps Banco',               sets:3, reps:'Max'},
+          {name:'Extensão Unilateral Cabo',    sets:3, reps:'12-15'},
+        ]},
+      { label: 'Pull B — Costas + Bíceps (Volume)',
+        exercises: [
+          {name:'Puxada Frontal Supinada',     sets:4, reps:'8-10'},
+          {name:'Remada Unilateral',           sets:4, reps:'10-12'},
+          {name:'Remada Cabo Baixo',           sets:4, reps:'12'},
+          {name:'Pullover Haltere',            sets:3, reps:'12'},
+          {name:'Rosca Concentrada',           sets:3, reps:'12'},
+          {name:'Rosca Scott Barra',           sets:3, reps:'10-12'},
+        ]},
+      { label: 'Legs B — Posterior + Glúteo (Volume)',
+        exercises: [
+          {name:'Stiff Halteres',              sets:4, reps:'10-12'},
+          {name:'Hip Thrust Barra',            sets:4, reps:'10-12'},
+          {name:'Afundo Búlgaro',              sets:3, reps:'10-12 cada'},
+          {name:'Cadeira Flexora',             sets:4, reps:'12-15'},
+          {name:'Abdução Máquina',             sets:3, reps:'15-20'},
+          {name:'Panturrilha Sentado',         sets:4, reps:'15-20'},
+        ]},
+    ],
+  },
+  {
+    id: 'pub_strength5',
+    name: 'Força 5/3/1',
+    objective: 'Força Máxima',
+    level: 'intermediate',
+    levelLabel: 'Intermediário',
+    freq: '4x / semana',
+    description: 'Baseado na metodologia 5/3/1 de Jim Wendler. Foco em 4 movimentos principais com progressão de carga semanal. Complementado com trabalho assistência.',
+    days: [
+      { label: 'Dia 1 — Press (Ombro Principal)',
+        exercises: [
+          {name:'Desenvolvimento Barra',       sets:3, reps:'5/3/1', notes:'Progressão: 65% / 75% / 85% 1RM'},
+          {name:'Supino Reto Barra',           sets:5, reps:'10',    notes:'Assistência — 50-60% 1RM'},
+          {name:'Remada Curvada Barra',        sets:5, reps:'10'},
+          {name:'Elevação Lateral',            sets:3, reps:'15-20'},
+          {name:'Face Pull Cabo',              sets:3, reps:'15'},
+        ]},
+      { label: 'Dia 2 — Levantamento Terra',
+        exercises: [
+          {name:'Levantamento Terra',          sets:3, reps:'5/3/1', notes:'Progressão: 65% / 75% / 85% 1RM'},
+          {name:'Agachamento Livre',           sets:5, reps:'10',    notes:'Assistência — 50-60% 1RM'},
+          {name:'Leg Press 45°',               sets:5, reps:'10'},
+          {name:'Abdominal Supra',             sets:5, reps:'15'},
+          {name:'Prancha',                     sets:3, reps:'60s'},
+        ]},
+      { label: 'Dia 3 — Supino (Peito Principal)',
+        exercises: [
+          {name:'Supino Reto Barra',           sets:3, reps:'5/3/1', notes:'Progressão: 65% / 75% / 85% 1RM'},
+          {name:'Desenvolvimento Barra',       sets:5, reps:'10',    notes:'Assistência — 50-60% 1RM'},
+          {name:'Puxada Frontal Pronada',      sets:5, reps:'10'},
+          {name:'Rosca Direta Barra',          sets:3, reps:'10'},
+          {name:'Tríceps Corda Cabo',          sets:3, reps:'12'},
+        ]},
+      { label: 'Dia 4 — Agachamento',
+        exercises: [
+          {name:'Agachamento Livre',           sets:3, reps:'5/3/1', notes:'Progressão: 65% / 75% / 85% 1RM'},
+          {name:'Levantamento Terra Romeno',   sets:5, reps:'10',    notes:'Assistência — 50-60% 1RM'},
+          {name:'Extensão de Perna',           sets:5, reps:'15'},
+          {name:'Cadeira Flexora',             sets:5, reps:'15'},
+          {name:'Hip Thrust Barra',            sets:3, reps:'12'},
+          {name:'Panturrilha em Pé (Calf Raise)', sets:4, reps:'15'},
+        ]},
+    ],
+  },
+];
+
+// ================================================================
+// AUTOCOMPLETE DE EXERCÍCIO
+// ================================================================
+let _acTarget = null; // { ei, inputEl }
+let _acInited = false;
+
+function initExerciseAutocomplete() {
+  if(_acInited) return;
+  _acInited = true;
+  // Delegated listener on the exercises container
+  document.getElementById('aw-exercises').addEventListener('input', e => {
+    const inp = e.target;
+    if(!inp.classList.contains('exercise-name-input')) return;
+    const q = inp.value.trim().toLowerCase();
+    const ei = parseInt(inp.dataset.ei ?? inp.closest('[data-ei]')?.dataset.ei ?? -1);
+    _acTarget = { ei, inputEl: inp };
+    if(!q || q.length < 2) { closeAutocomplete(); return; }
+    showAutocomplete(inp, q);
+  });
+
+  document.addEventListener('click', e => {
+    if(!e.target.closest('.autocomplete-list') && !e.target.classList.contains('exercise-name-input'))
+      closeAutocomplete();
+  });
+}
+
+function showAutocomplete(inputEl, q) {
+  closeAutocomplete();
+  const results = EXERCISE_FLAT.filter(e => e.name.toLowerCase().includes(q)).slice(0, 12);
+  if(!results.length) return;
+
+  // Group results by muscle group
+  const byGroup = {};
+  results.forEach(r => { (byGroup[r.group] = byGroup[r.group]||[]).push(r); });
+
+  const list = document.createElement('div');
+  list.className = 'autocomplete-list';
+  list.id = 'ac-list';
+
+  Object.entries(byGroup).forEach(([group, items]) => {
+    const h = document.createElement('div');
+    h.className = 'autocomplete-group';
+    h.textContent = group;
+    list.appendChild(h);
+    items.forEach(item => {
+      const d = document.createElement('div');
+      d.className = 'autocomplete-item';
+      d.innerHTML = `<span>${item.name}</span><span class="ac-muscle">${item.group}</span>`;
+      d.addEventListener('mousedown', e => {
+        e.preventDefault();
+        selectExercise(item.name);
+      });
+      list.appendChild(d);
+    });
+  });
+
+  const wrap = inputEl.closest('.exercise-block') || inputEl.parentElement;
+  wrap.style.position = 'relative';
+  // Position relative to input
+  inputEl.insertAdjacentElement('afterend', list);
+}
+
+function closeAutocomplete() {
+  document.getElementById('ac-list')?.remove();
+}
+
+function selectExercise(name) {
+  if(!_acTarget) return;
+  // Find the exercise index from current active workout state
+  const inputs = document.querySelectorAll('.exercise-name-input');
+  inputs.forEach((inp, i) => {
+    if(inp === _acTarget.inputEl) {
+      S.activeWorkout.exercises[i].name = name;
+      inp.value = name;
+    }
+  });
+  closeAutocomplete();
+  _acTarget = null;
+}
+
+// ================================================================
+// PROGRAMAS — TABS + BIBLIOTECA
+// ================================================================
+let _progTab = 'mine';
+
+function switchProgTab(tab) {
+  _progTab = tab;
+  document.getElementById('prog-tab-mine').classList.toggle('active', tab==='mine');
+  document.getElementById('prog-tab-lib').classList.toggle('active', tab==='library');
+  document.getElementById('prog-section-mine').classList.toggle('hide', tab!=='mine');
+  document.getElementById('prog-section-lib').classList.toggle('hide', tab!=='library');
+  if(tab==='library') renderLibrary();
+}
+
+function renderLibrary() {
+  const el = document.getElementById('library-list');
+  const levelBadge = {beginner:'lib-badge-beginner',intermediate:'lib-badge-intermediate',advanced:'lib-badge-advanced'};
+  el.innerHTML = PUBLIC_PROGRAMS.map((p, pi) => `
+    <div class="lib-card">
+      <div class="lib-card-header">
+        <div class="flex between center">
+          <div>
+            <div class="lib-card-name">${esc(p.name)}</div>
+            <div class="lib-card-meta">${esc(p.objective)} · ${esc(p.freq)}</div>
+          </div>
+          <span class="lib-badge ${levelBadge[p.level]||''}">${esc(p.levelLabel)}</span>
+        </div>
+        <div class="small muted mt8">${esc(p.description)}</div>
+        <div class="flex gap8 mt12">
+          <button class="btn btn-sm btn-ghost" onclick="copyPublicProgram(${pi})" style="flex:1">📋 Copiar</button>
+          <button class="btn btn-sm btn-primary" onclick="openProgramDetail(${pi})" style="flex:1">Ver dias →</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function openProgramDetail(pi) {
+  const p = PUBLIC_PROGRAMS[pi];
+  const html = `
+    <div class="modal-title">${esc(p.name)}</div>
+    <div class="muted small mb16">${esc(p.description)}</div>
+    ${p.days.map((d, di) => `
+      <div class="lib-day-row" onclick="startLibraryDay(${pi},${di})">
+        <div class="lib-day-num">${di+1}</div>
+        <div class="lib-day-info">
+          <div class="lib-day-name">${esc(d.label)}</div>
+          <div class="lib-day-exercises">${d.exercises.map(e=>e.name).slice(0,3).join(' · ')}${d.exercises.length>3?'…':''}</div>
+        </div>
+        <span style="color:var(--primary);font-size:18px">⚡</span>
+      </div>`).join('')}
+    <button class="btn btn-ghost btn-block mt16" onclick="closeModal('modal-program-detail')">Fechar</button>
+  `;
+  document.getElementById('modal-program-detail-content').innerHTML = html;
+  openModal('modal-program-detail');
+}
+
+function startLibraryDay(pi, di) {
+  const p = PUBLIC_PROGRAMS[pi];
+  const day = p.days[di];
+  closeModal('modal-program-detail');
+  // Build exercises for active workout from the library day
+  const exercises = day.exercises.map(e => ({
+    name: e.name,
+    notes: e.notes || '',
+    sets: Array.from({length: parseInt(e.sets)||3}, () => ({
+      weight: '', reps: e.reps||'', rpe: '', is_pr: false, type: 'normal', loggedAt: null
+    }))
+  }));
+  openActiveWorkout({ label: `${p.name} — ${day.label}`, exercises });
+}
+
+async function copyPublicProgram(pi) {
+  const p = PUBLIC_PROGRAMS[pi];
+  const { error } = await db.from('workout_programs').insert({
+    created_by: S.user.id,
+    name: p.name,
+    objective: p.objective,
+    description: p.description,
+    days: p.days,
+    is_template: false,
+    updated_at: new Date().toISOString()
+  });
+  if(error) { toast('Erro: '+error.message, 'error'); return; }
+  await loadPrograms();
+  toast(`"${p.name}" copiado para seus programas ✓`, 'success');
+  switchProgTab('mine');
+}
+
+// Atualiza renderPrograms para mostrar botão "Treinar" por dia
+function renderPrograms() {
+  const el = document.getElementById('programs-list');
+  if(!S.programs.length) {
+    el.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">📋</div>
+      <div class="empty-title">Nenhum programa ainda</div>
+      <div class="empty-text">Crie um programa ou copie um da Biblioteca →</div>
+      <button class="btn btn-primary btn-sm mt12" onclick="switchProgTab('library')">Ver Biblioteca</button>
+    </div>`;
+    return;
+  }
+  el.innerHTML = S.programs.map(p => {
+    const daysHTML = (p.days||[]).map((d,di) => `
+      <div class="lib-day-row" onclick="startProgramDay('${p.id}',${di})">
+        <div class="lib-day-num">${di+1}</div>
+        <div class="lib-day-info">
+          <div class="lib-day-name">${esc(d.label||`Dia ${di+1}`)}</div>
+          <div class="lib-day-exercises">${(d.exercises||[]).map(e=>e.name).slice(0,3).join(' · ')}${(d.exercises||[]).length>3?'…':''}</div>
+        </div>
+        <span style="color:var(--primary)">⚡</span>
+      </div>`).join('');
+    return `
+      <div class="lib-card mb12">
+        <div class="lib-card-header">
+          <div class="flex between center">
+            <div>
+              <div class="lib-card-name">${esc(p.name)}</div>
+              <div class="lib-card-meta">${esc(p.objective||'')} · ${(p.days||[]).length} dias</div>
+            </div>
+            <div class="flex gap8">
+              <button class="btn btn-sm btn-ghost" onclick="openCreateProgram(S.programs.find(x=>x.id==='${p.id}'))">Editar</button>
+              ${S.mode==='trainer'?`<button class="btn btn-sm btn-ghost" onclick="openAssignModalProgram('${p.id}')">Atribuir</button>`:''}
+            </div>
+          </div>
+        </div>
+        ${daysHTML}
+      </div>`;
+  }).join('');
+}
+
+function startProgramDay(progId, di) {
+  const p = S.programs.find(x=>x.id===progId);
+  if(!p) return;
+  const day = (p.days||[])[di];
+  if(!day) return;
+  const exercises = (day.exercises||[]).map(e => ({
+    name: e.name,
+    notes: e.notes || '',
+    sets: Array.from({length: parseInt(e.sets)||3}, () => ({
+      weight: '', reps: e.reps||'', rpe: '', is_pr: false, type: 'normal', loggedAt: null
+    }))
+  }));
+  openActiveWorkout({ label: `${p.name} — ${day.label||`Dia ${di+1}`}`, exercises });
 }
 
 // ================================================================
@@ -2482,6 +3059,7 @@ async function savePhase() {
 // ================================================================
 async function init() {
   checkInviteInHash();
+  initExerciseAutocomplete();
 
   const { data: { session } } = await db.auth.getSession();
   if(session?.user) {
