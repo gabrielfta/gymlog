@@ -156,13 +156,13 @@ textarea{resize:vertical;min-height:80px}
 /* ===== ACTIVE WORKOUT ===== */
 #view-active-workout{position:fixed;inset:0;z-index:200;background:var(--bg);display:none;flex-direction:column;overflow:hidden}
 #view-active-workout.open{display:flex}
-.aw-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;background:var(--bg2)}
-.aw-timer{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--primary);flex:1;text-align:center}
+.aw-header{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;background:var(--bg2)}
+.aw-timer{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--primary);flex:1;text-align:center;letter-spacing:-.5px}
 .aw-body{flex:1;overflow-y:auto;padding:16px}
 .aw-body::-webkit-scrollbar{width:0}
 .aw-footer{padding:12px 16px;border-top:1px solid var(--border);background:var(--bg2)}
-.exercise-block{background:var(--card);border:1px solid var(--border);border-radius:var(--r);margin-bottom:12px;overflow:hidden}
-.exercise-header{padding:12px 14px;display:flex;align-items:center;justify-content:space-between;background:var(--card2)}
+.exercise-block{background:var(--card);border:1px solid var(--border);border-radius:var(--r);margin-bottom:10px;overflow:hidden}
+.exercise-header{padding:10px 14px;display:flex;align-items:center;justify-content:space-between;background:var(--card2);border-bottom:1px solid var(--border)}
 .exercise-name-input{background:none;border:none;color:var(--text);font-size:16px;font-weight:700;padding:0;flex:1}
 .exercise-name-input:focus{outline:none}
 .sets-table{width:100%;border-collapse:collapse}
@@ -303,13 +303,12 @@ input:checked+.slider:before{transform:translateX(20px)}
 .stepper-val:focus{outline:none}
 
 /* ===== SET TYPE ===== */
-.set-type-row{display:flex;gap:3px;padding:4px 14px 6px;flex-wrap:wrap}
-.set-type-btn{padding:3px 8px;border-radius:999px;border:1px solid var(--border);background:none;color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;transition:all var(--trans)}
-.set-type-btn.active-warmup{background:rgba(245,158,11,.2);border-color:var(--warning);color:var(--warning)}
-.set-type-btn.active-normal{background:rgba(99,102,241,.2);border-color:var(--primary);color:var(--primary)}
-.set-type-btn.active-test{background:rgba(16,185,129,.2);border-color:var(--success);color:var(--success)}
-.set-type-btn.active-failure{background:rgba(239,68,68,.2);border-color:var(--danger);color:var(--danger)}
-.set-type-btn.active-drop{background:rgba(168,85,247,.2);border-color:#a855f7;color:#a855f7}
+.set-type-select{background:var(--card2);border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:11px;font-weight:600;padding:3px 4px;cursor:pointer;max-width:72px}
+.set-type-select.warmup{color:var(--warning);border-color:var(--warning)}
+.set-type-select.normal{color:var(--muted)}
+.set-type-select.test{color:var(--success);border-color:var(--success)}
+.set-type-select.failure{color:var(--danger);border-color:var(--danger)}
+.set-type-select.drop{color:#a855f7;border-color:#a855f7}
 
 /* ===== REST TIMER ===== */
 .rest-pill{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.25);color:var(--primary);font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}
@@ -814,6 +813,22 @@ input:checked+.slider:before{transform:translateX(20px)}
   <div class="modal" style="max-height:88vh">
     <div class="modal-handle"></div>
     <div id="modal-program-detail-content"></div>
+  </div>
+</div>
+
+<!-- ===== CONFIRM START WORKOUT ===== -->
+<div id="modal-confirm-start" class="modal-backdrop">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div style="text-align:center;padding:8px 0 20px">
+      <div style="font-size:40px;margin-bottom:12px">🏋️</div>
+      <div class="modal-title" style="margin-bottom:4px" id="confirm-start-title">Iniciar treino?</div>
+      <div class="muted small" id="confirm-start-subtitle"></div>
+    </div>
+    <div class="flex col gap8">
+      <button class="btn btn-primary btn-block" id="confirm-start-btn">▶ Iniciar agora</button>
+      <button class="btn btn-ghost btn-block" onclick="closeModal('modal-confirm-start')">Cancelar</button>
+    </div>
   </div>
 </div>
 
@@ -1416,7 +1431,7 @@ function renderActiveWorkout() {
       </div>
       <table class="sets-table">
         <thead><tr>
-          <th>#</th><th>Peso (kg)</th><th>Reps</th><th>RPE</th><th>PR</th><th></th>
+          <th>#</th><th>Peso (kg)</th><th>Reps</th><th>RPE</th><th>Tipo</th><th>PR</th><th></th>
         </tr></thead>
         <tbody>
         ${ex.sets.map((s,si) => `
@@ -1442,24 +1457,23 @@ function renderActiveWorkout() {
               <option value="">–</option>
               ${[6,6.5,7,7.5,8,8.5,9,9.5,10].map(r=>`<option value="${r}"${s.rpe==r?' selected':''}>${r}</option>`).join('')}
             </select></td>
+            <td><select class="set-type-select ${s.type||'normal'}" onchange="setSetType(${ei},${si},this.value);this.className='set-type-select '+this.value">
+              <option value="normal"${(s.type||'normal')==='normal'?' selected':''}>Normal</option>
+              <option value="warmup"${s.type==='warmup'?' selected':''}>Aquec.</option>
+              <option value="test"${s.type==='test'?' selected':''}>Teste</option>
+              <option value="failure"${s.type==='failure'?' selected':''}>Falha</option>
+              <option value="drop"${s.type==='drop'?' selected':''}>Drop</option>
+            </select></td>
             <td><span style="cursor:pointer;font-size:16px" onclick="togglePR(${ei},${si})">${s.is_pr?'⭐':'☆'}</span></td>
             <td><button class="del-set-btn" onclick="removeSet(${ei},${si})">✕</button></td>
-          </tr>
-          <tr>
-            <td colspan="6" style="padding:0">
-              <div class="set-type-row">
-                ${SET_TYPES.map(t=>`<button class="set-type-btn${(s.type||'normal')===t.k?' '+t.cls:''}"
-                  onclick="setSetType(${ei},${si},'${t.k}')">${t.label}</button>`).join('')}
-              </div>
-            </td>
           </tr>`).join('')}
         </tbody>
       </table>
       <div class="add-set-row">
         <button class="btn btn-ghost btn-sm" onclick="addSet(${ei})">+ Série</button>
       </div>
-      <div style="padding:0 14px 10px">
-        <textarea rows="2" placeholder="Instruções, técnica, peso alvo, observações..." style="font-size:13px;resize:none;width:100%;box-sizing:border-box"
+      <div style="padding:6px 14px 10px">
+        <textarea rows="2" placeholder="📝  Instruções, técnica, peso alvo..." style="font-size:13px;resize:none;width:100%;box-sizing:border-box;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);min-height:unset"
           oninput="S.activeWorkout.exercises[${ei}].notes=this.value">${esc(ex.notes||'')}</textarea>
       </div>
     </div>`).join('');
@@ -1475,7 +1489,7 @@ function stepSet(ei, si, field, delta) {
 
 function setSetType(ei, si, type) {
   S.activeWorkout.exercises[ei].sets[si].type = type;
-  renderActiveWorkout();
+  // No re-render needed — select handles its own visual state
 }
 
 function updateSet(ei, si, field, val) {
@@ -1940,9 +1954,14 @@ async function sendEmailInvite() {
     }
   });
   if(error) { toast('Erro: '+error.message,'error'); return; }
-  // In a real app, you'd send an email here via a Supabase Edge Function
-  toast(`Convite gerado para ${email}. Compartilhe o código: ${token.slice(0,8)}`, 'success');
-  closeModal('modal-invite');
+  // Exibe o link completo para o treinador copiar e enviar manualmente
+  const link = `${location.origin}${location.pathname}#invite=${token}`;
+  document.getElementById('invite-link-display').innerHTML = `
+    <div style="margin-bottom:6px;font-size:12px;color:var(--muted)">Link gerado para <strong style="color:var(--text)">${email}</strong> — copie e envie:</div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="flex:1;word-break:break-all;font-size:12px;color:var(--text)">${link}</span>
+      <button class="copy-btn" onclick="copyToClipboard('${link}')">Copiar</button>
+    </div>`;
   loadStudents();
 }
 
@@ -2706,8 +2725,6 @@ function openProgramDetail(pi) {
 function startLibraryDay(pi, di) {
   const p = PUBLIC_PROGRAMS[pi];
   const day = p.days[di];
-  closeModal('modal-program-detail');
-  // Build exercises for active workout from the library day
   const exercises = day.exercises.map(e => ({
     name: e.name,
     notes: e.notes || '',
@@ -2715,7 +2732,9 @@ function startLibraryDay(pi, di) {
       weight: '', reps: e.reps||'', rpe: '', is_pr: false, type: 'normal', loggedAt: null
     }))
   }));
-  openActiveWorkout({ label: `${p.name} — ${day.label}`, exercises });
+  const label = `${p.name} — ${day.label}`;
+  closeModal('modal-program-detail');
+  confirmStartWorkout(label, exercises, `${exercises.length} exercícios · ${day.exercises.reduce((a,e)=>a+(parseInt(e.sets)||3),0)} séries planejadas`);
 }
 
 async function copyPublicProgram(pi) {
@@ -2768,12 +2787,32 @@ function renderPrograms() {
             <div class="flex gap8">
               <button class="btn btn-sm btn-ghost" onclick="openCreateProgram(S.programs.find(x=>x.id==='${p.id}'))">Editar</button>
               ${S.mode==='trainer'?`<button class="btn btn-sm btn-ghost" onclick="openAssignModalProgram('${p.id}')">Atribuir</button>`:''}
+              <button class="btn btn-sm btn-ghost" style="color:var(--danger);border-color:var(--danger)" onclick="event.stopPropagation();deleteProgram('${p.id}')">🗑</button>
             </div>
           </div>
         </div>
         ${daysHTML}
       </div>`;
   }).join('');
+}
+
+function confirmStartWorkout(label, exercises, subtitle) {
+  document.getElementById('confirm-start-title').textContent = label;
+  document.getElementById('confirm-start-subtitle').textContent = subtitle || `${exercises.length} exercício${exercises.length!==1?'s':''}`;
+  document.getElementById('confirm-start-btn').onclick = () => {
+    closeModal('modal-confirm-start');
+    openActiveWorkout({ label, exercises });
+  };
+  openModal('modal-confirm-start');
+}
+
+async function deleteProgram(id) {
+  if(!confirm('Excluir este programa? Essa ação não pode ser desfeita.')) return;
+  const { error } = await db.from('workout_programs').delete().eq('id', id).eq('created_by', S.user.id);
+  if(error) { toast('Erro: '+error.message,'error'); return; }
+  S.programs = S.programs.filter(p => p.id !== id);
+  renderPrograms();
+  toast('Programa excluído.','success');
 }
 
 function startProgramDay(progId, di) {
@@ -2788,7 +2827,8 @@ function startProgramDay(progId, di) {
       weight: '', reps: e.reps||'', rpe: '', is_pr: false, type: 'normal', loggedAt: null
     }))
   }));
-  openActiveWorkout({ label: `${p.name} — ${day.label||`Dia ${di+1}`}`, exercises });
+  const label = `${p.name} — ${day.label||`Dia ${di+1}`}`;
+  confirmStartWorkout(label, exercises, `${exercises.length} exercícios · ${(day.exercises||[]).reduce((a,e)=>a+(parseInt(e.sets)||3),0)} séries planejadas`);
 }
 
 // ================================================================
@@ -2850,17 +2890,36 @@ function repeatWorkout(id) {
 
 function copyWorkoutText(w) {
   if(!w) return;
-  const lines = [`📋 ${w.name} — ${formatDate(w.date)} (${w.duration||0} min)`,''];
+  const checkin  = w.started_at ? new Date(w.started_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : '–';
+  const checkout = w.ended_at   ? new Date(w.ended_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})   : '–';
+  const durH = Math.floor((w.duration||0)/60);
+  const durM = (w.duration||0) % 60;
+  const durStr = durH > 0 ? `${durH}h${durM.toString().padStart(2,'0')}` : `${durM} min`;
+  const effortStr = w.effort ? '⭐'.repeat(w.effort)+` (${EFFORT_LABELS[w.effort]||''})` : '–';
+  const SET_TYPE_TXT = {warmup:'Aquec.',normal:'',test:'Teste',failure:'Falha',drop:'Drop'};
+
+  const lines = [
+    `━━━━━━━━━━━━━━━━━━`,
+    `🏋️ ${w.name}`,
+    `📅 ${formatDate(w.date)}`,
+    `⏱ Check-in: ${checkin}  •  Check-out: ${checkout}  •  ${durStr}`,
+    `💪 Esforço: ${effortStr}`,
+    `━━━━━━━━━━━━━━━━━━`,
+    '',
+  ];
   (w.exercises||[]).forEach(e => {
-    lines.push(`• ${e.name}`);
+    lines.push(`▸ ${e.name}`);
     (e.sets||[]).forEach((s,i) => {
-      const type = s.type && s.type!=='normal' ? ` [${s.type}]` : '';
-      lines.push(`  ${i+1}. ${s.weight||'?'}kg × ${s.reps||'?'} reps${s.rpe?' RPE '+s.rpe:''}${type}${s.is_pr?' ⭐PR':''}`);
+      const typeTag = s.type && s.type!=='normal' ? ` [${SET_TYPE_TXT[s.type]||s.type}]` : '';
+      const pr = s.is_pr ? ' ⭐PR' : '';
+      const rpe = s.rpe ? ` RPE ${s.rpe}` : '';
+      lines.push(`  ${i+1}. ${s.weight||'?'}kg × ${s.reps||'?'} reps${rpe}${typeTag}${pr}`);
     });
     if(e.notes) lines.push(`  📝 ${e.notes}`);
+    lines.push('');
   });
-  if(w.notes) lines.push('', `Notas: ${w.notes}`);
-  lines.push('', 'via GymLog');
+  if(w.notes) lines.push(`Obs: ${w.notes}`, '');
+  lines.push('via GymLog');
   navigator.clipboard.writeText(lines.join('\n'))
     .then(() => toast('Treino copiado! ✓', 'success'))
     .catch(() => toast('Não foi possível copiar.', 'error'));
