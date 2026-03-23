@@ -9,19 +9,22 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root {
-  --bg:         #0f1117;
-  --bg2:        #161b27;
-  --card:       #1a1f2e;
-  --card2:      #222840;
-  --border:     #2a3148;
-  --text:       #f1f5f9;
-  --muted:      #8892a4;
-  --primary:    #6366f1;
-  --primary-d:  #4f52c4;
+  --bg:         #0a0a0a;
+  --bg2:        #111111;
+  --card:       #181818;
+  --card2:      #1f1f1f;
+  --border:     #2a2a2a;
+  --text:       #f0f0f0;
+  --muted:      #666;
+  --primary:    #D4FF00;
+  --primary-d:  #b8dd00;
+  --primary-txt:#0a0a0a;
   --success:    #10b981;
   --danger:     #ef4444;
   --warning:    #f59e0b;
-  --pr:         #fbbf24;
+  --pr:         #D4FF00;
+  --upper-color:#00D4FF;
+  --lower-color:#9B6DFF;
   --r:          12px;
   --rs:         8px;
   --trans:      0.18s ease;
@@ -60,10 +63,10 @@ body{display:flex;flex-direction:column;max-width:480px;margin:0 auto;position:r
 .text-center{text-align:center}
 
 /* ===== BUTTONS ===== */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px 20px;border-radius:var(--r);border:none;cursor:pointer;font-size:15px;font-weight:600;transition:opacity var(--trans),transform var(--trans);user-select:none}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px 20px;border-radius:var(--rs);border:none;cursor:pointer;font-size:15px;font-weight:700;transition:opacity var(--trans),transform var(--trans);user-select:none;text-transform:uppercase;letter-spacing:.03em}
 .btn:active{opacity:.8;transform:scale(.98)}
 .btn:disabled{opacity:.4;cursor:default}
-.btn-primary{background:var(--primary);color:#fff}
+.btn-primary{background:var(--primary);color:var(--primary-txt)}
 .btn-primary:hover{background:var(--primary-d)}
 .btn-ghost{background:transparent;color:var(--text);border:1.5px solid var(--border)}
 .btn-ghost:hover{border-color:var(--primary);color:var(--primary)}
@@ -91,16 +94,17 @@ textarea{resize:vertical;min-height:80px}
 
 /* ===== HEADER ===== */
 #header{position:sticky;top:0;z-index:100;background:var(--bg2);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:8px}
-.header-title{font-size:18px;font-weight:700;color:var(--text)}
-.header-logo{font-size:20px;font-weight:800;background:linear-gradient(135deg,var(--primary),#818cf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.header-title{font-size:16px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.header-logo{font-size:22px;font-weight:900;color:var(--text);letter-spacing:-1px}
+.header-logo span{color:var(--primary)}
 .notif-btn{position:relative;background:none;border:none;cursor:pointer;padding:4px;color:var(--muted)}
 .notif-btn svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2}
 .notif-badge{position:absolute;top:0;right:0;background:var(--danger);color:#fff;border-radius:999px;font-size:10px;font-weight:700;padding:1px 5px;min-width:16px;text-align:center;line-height:1.4}
 
 /* ===== BOTTOM NAV ===== */
 #bottom-nav{position:fixed;bottom:0;left:0;right:0;max-width:480px;margin:0 auto;background:var(--bg2);border-top:1px solid var(--border);display:flex;padding:8px 0 env(safe-area-inset-bottom,8px);z-index:100}
-.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 4px;cursor:pointer;color:var(--muted);transition:color var(--trans);border:none;background:none;font-size:11px;font-weight:500}
-.nav-item svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 4px;cursor:pointer;color:var(--muted);transition:color var(--trans);border:none;background:none;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.nav-item svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.5}
 .nav-item.active{color:var(--primary)}
 .nav-item:active{opacity:.7}
 
@@ -115,11 +119,12 @@ textarea{resize:vertical;min-height:80px}
 /* ===== AUTH ===== */
 #view-auth{min-height:100vh;display:none;flex-direction:column;justify-content:center;padding:32px 24px}
 #view-auth.active{display:flex}
-.auth-logo{font-size:36px;font-weight:800;background:linear-gradient(135deg,var(--primary),#818cf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:4px}
-.auth-sub{color:var(--muted);font-size:14px;margin-bottom:32px}
-.auth-tabs{display:flex;background:var(--card);border-radius:var(--r);padding:4px;margin-bottom:24px}
-.auth-tab{flex:1;padding:9px;border-radius:var(--rs);border:none;background:none;color:var(--muted);font-size:14px;font-weight:600;cursor:pointer;transition:all var(--trans)}
-.auth-tab.active{background:var(--primary);color:#fff}
+.auth-logo{font-size:42px;font-weight:900;letter-spacing:-2px;margin-bottom:4px;color:var(--text)}
+.auth-logo span{color:var(--primary)}
+.auth-sub{color:var(--muted);font-size:13px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:32px}
+.auth-tabs{display:flex;background:var(--card);border-radius:var(--rs);padding:3px;margin-bottom:24px;border:1px solid var(--border)}
+.auth-tab{flex:1;padding:9px;border-radius:6px;border:none;background:none;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;transition:all var(--trans);text-transform:uppercase;letter-spacing:.05em}
+.auth-tab.active{background:var(--primary);color:var(--primary-txt)}
 .auth-error{color:var(--danger);font-size:13px;text-align:center;padding:8px;background:rgba(239,68,68,.1);border-radius:var(--rs);margin-top:8px}
 
 /* ===== ONBOARDING ===== */
@@ -132,13 +137,43 @@ textarea{resize:vertical;min-height:80px}
 .role-desc{font-size:12px;color:var(--muted)}
 
 /* ===== DASHBOARD ===== */
-.dash-greeting{font-size:22px;font-weight:700;margin-bottom:4px}
-.dash-sub{color:var(--muted);font-size:14px;margin-bottom:20px}
-.stat-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px}
-.stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px 10px;text-align:center}
-.stat-val{font-size:22px;font-weight:700;color:var(--primary)}
-.stat-label{font-size:11px;color:var(--muted);margin-top:2px}
-.section-title{font-size:14px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px}
+.dash-greeting{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px}
+.dash-name{font-size:28px;font-weight:900;color:var(--text);letter-spacing:-1px;margin-bottom:20px}
+.stat-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;margin-bottom:24px;background:var(--border);border-radius:var(--r);overflow:hidden;border:1px solid var(--border)}
+.stat-card{background:var(--card);padding:16px 8px;text-align:center}
+.stat-val{font-size:28px;font-weight:900;color:var(--primary);letter-spacing:-1px;font-variant-numeric:tabular-nums}
+.stat-label{font-size:10px;color:var(--muted);margin-top:3px;text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+.section-title{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px}
+
+/* ===== PRÓXIMO TREINO CARD ===== */
+.next-workout-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:20px;overflow:hidden;position:relative}
+.next-workout-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;border:1px solid}
+.nwb-upper{background:rgba(0,212,255,.1);color:var(--upper-color);border-color:rgba(0,212,255,.3)}
+.nwb-lower{background:rgba(155,109,255,.1);color:var(--lower-color);border-color:rgba(155,109,255,.3)}
+.nwb-default{background:rgba(212,255,0,.1);color:var(--primary);border-color:rgba(212,255,0,.3)}
+.next-workout-title{font-size:20px;font-weight:900;letter-spacing:-.5px;margin-bottom:4px}
+.next-workout-meta{font-size:13px;color:var(--muted);margin-bottom:14px}
+
+/* ===== WORKOUT CARDS (history/recent) ===== */
+.wc-avatar{width:46px;height:46px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;flex-shrink:0;text-transform:uppercase;letter-spacing:-.5px}
+.wc-avatar-upper{background:rgba(0,212,255,.15);color:var(--upper-color)}
+.wc-avatar-lower{background:rgba(155,109,255,.15);color:var(--lower-color)}
+.wc-avatar-default{background:rgba(212,255,0,.15);color:var(--primary)}
+.wc-volume{font-size:16px;font-weight:900;color:var(--primary);letter-spacing:-.5px;text-align:right}
+.wc-volume-lbl{font-size:10px;color:var(--muted);text-align:right;text-transform:uppercase;letter-spacing:.04em}
+
+/* ===== TREINAR VIEW ===== */
+.train-view-title{font-size:32px;font-weight:900;letter-spacing:-1.5px;margin-bottom:4px}
+.train-view-sub{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:24px}
+.day-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.day-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px;cursor:pointer;transition:border-color var(--trans),transform var(--trans);overflow:hidden;position:relative}
+.day-card:active{transform:scale(.97)}
+.day-card-accent{position:absolute;top:0;left:0;right:0;height:3px}
+.day-card-type{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;display:flex;align-items:center;gap:5px}
+.day-card-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.day-card-name{font-size:18px;font-weight:900;letter-spacing:-.5px;margin-bottom:4px;line-height:1.1}
+.day-card-meta{font-size:12px;color:var(--muted)}
+.day-card-hover:hover{border-color:var(--primary)}
 
 /* ===== WORKOUT CARDS ===== */
 .workout-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px;cursor:pointer;transition:border-color var(--trans);margin-bottom:10px}
@@ -156,8 +191,14 @@ textarea{resize:vertical;min-height:80px}
 /* ===== ACTIVE WORKOUT ===== */
 #view-active-workout{position:fixed;inset:0;z-index:200;background:var(--bg);display:none;flex-direction:column;overflow:hidden}
 #view-active-workout.open{display:flex}
-.aw-header{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;background:var(--bg2)}
-.aw-timer{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--primary);flex:1;text-align:center;letter-spacing:-.5px}
+.aw-header{padding:12px 14px 10px;border-bottom:1px solid var(--border);background:var(--bg2)}
+.aw-header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.aw-workout-badge{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;padding:3px 10px;border-radius:999px;background:rgba(212,255,0,.1);color:var(--primary);border:1px solid rgba(212,255,0,.25)}
+.aw-timer{font-size:48px;font-weight:900;font-variant-numeric:tabular-nums;color:var(--primary);letter-spacing:-2px;line-height:1;margin-bottom:8px;cursor:pointer}
+.aw-actions{display:flex;gap:8px}
+.aw-btn-notes{background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:var(--rs);padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:.04em}
+.aw-btn-finish{background:var(--success);color:#fff;border:none;border-radius:var(--rs);padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:.04em;flex:1}
+.aw-btn-cancel{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:var(--danger);border-radius:var(--rs);padding:8px 12px;font-size:13px;font-weight:700;cursor:pointer}
 .aw-body{flex:1;overflow-y:auto;padding:16px}
 .aw-body::-webkit-scrollbar{width:0}
 .aw-footer{padding:12px 16px;border-top:1px solid var(--border);background:var(--bg2)}
@@ -379,7 +420,7 @@ input:checked+.slider:before{transform:translateX(20px)}
 
 <!-- ===== AUTH VIEW ===== -->
 <div id="view-auth">
-  <div class="auth-logo">GymLog</div>
+  <div class="auth-logo">GYM<span>LOG</span></div>
   <div class="auth-sub">Registre treinos. Conecte treinadores.</div>
   <div class="auth-tabs">
     <button class="auth-tab active" onclick="setAuthTab('login')">Entrar</button>
@@ -430,7 +471,7 @@ input:checked+.slider:before{transform:translateX(20px)}
 
 <!-- ===== HEADER ===== -->
 <div id="header" class="hide">
-  <div class="header-logo">GL</div>
+  <div class="header-logo">GYM<span>LOG</span></div>
   <div id="header-title" class="header-title" style="flex:1;text-align:center"></div>
   <button class="notif-btn" onclick="showNotifications()" id="notif-btn">
     <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
@@ -451,23 +492,30 @@ input:checked+.slider:before{transform:translateX(20px)}
 
   <!-- ===== ATHLETE HOME ===== -->
   <div class="view" id="tab-home">
-    <div id="home-greeting" class="dash-greeting mt16"></div>
-    <div class="dash-sub">Prontos para treinar?</div>
+    <div style="padding-top:8px">
+      <div id="home-greeting" class="dash-greeting"></div>
+      <div id="home-name" class="dash-name"></div>
+    </div>
     <div class="stat-row" id="stats-row">
-      <div class="stat-card"><div class="stat-val" id="stat-week">–</div><div class="stat-label">Esta semana</div></div>
-      <div class="stat-card"><div class="stat-val" id="stat-month">–</div><div class="stat-label">Este mês</div></div>
-      <div class="stat-card"><div class="stat-val" id="stat-total">–</div><div class="stat-label">Total</div></div>
+      <div class="stat-card"><div class="stat-val" id="stat-total">–</div><div class="stat-label">Treinos</div></div>
+      <div class="stat-card"><div class="stat-val" id="stat-week">–</div><div class="stat-label">Esta Semana</div></div>
+      <div class="stat-card"><div class="stat-val" id="stat-streak">–</div><div class="stat-label">Streak</div></div>
     </div>
-    <button class="btn btn-primary btn-block mb16" onclick="openActiveWorkout()" style="font-size:17px;padding:15px">
-      ⚡ Iniciar Treino
-    </button>
-    <div class="section-title">Treinos recentes</div>
+    <div class="section-title">Próximo treino</div>
+    <div id="next-workout-area"></div>
+    <div class="section-title mt16">Recentes</div>
     <div id="recent-workouts"></div>
-    <!-- Active programs -->
-    <div id="programs-section" class="hide">
-      <div class="section-title mt16">Programas prescritos</div>
-      <div id="my-programs-list"></div>
+  </div>
+
+  <!-- ===== TREINAR ===== -->
+  <div class="view" id="tab-train">
+    <div class="train-view-title">Novo Treino</div>
+    <div class="train-view-sub">Template ou livre</div>
+    <div id="train-program-section">
+      <div class="section-title">Templates do programa</div>
+      <div id="train-day-grid" class="day-grid"></div>
     </div>
+    <button class="btn btn-ghost btn-block" style="border:1px dashed var(--border);font-size:15px;padding:16px" onclick="openActiveWorkout()">+ Treino Livre</button>
   </div>
 
   <!-- ===== HISTORY ===== -->
@@ -612,17 +660,17 @@ input:checked+.slider:before{transform:translateX(20px)}
     <button class="nav-item active" id="nav-home" onclick="showTab('home')">
       <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Início
     </button>
+    <button class="nav-item" id="nav-train" onclick="showTab('train')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>Treinar
+    </button>
     <button class="nav-item" id="nav-history" onclick="showTab('history')">
       <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Histórico
     </button>
     <button class="nav-item" id="nav-phases" onclick="showTab('phases')">
-      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Fases
-    </button>
-    <button class="nav-item" id="nav-trainers" onclick="showTab('trainers')">
-      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Trein.
+      <svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>Evolução
     </button>
     <button class="nav-item" id="nav-profile" onclick="showTab('profile')">
-      <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Perfil
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>Perfil
     </button>
   </div>
   <!-- trainer nav -->
@@ -649,12 +697,15 @@ input:checked+.slider:before{transform:translateX(20px)}
 <!-- ===== ACTIVE WORKOUT OVERLAY ===== -->
 <div id="view-active-workout">
   <div class="aw-header">
-    <button class="btn btn-sm btn-ghost" onclick="cancelWorkout()" style="padding:6px 10px">✕</button>
-    <div style="display:flex;flex-direction:column;align-items:center;flex:1;gap:2px">
-      <div class="aw-timer" id="aw-timer" style="cursor:pointer" onclick="minimizeTimer()" title="Minimizar">00:00 ↓</div>
-      <div id="rest-display" class="rest-pill hide">Descanso: <span id="rest-timer-val">0:00</span></div>
+    <div class="aw-header-top">
+      <span class="aw-workout-badge" id="aw-badge">Treino</span>
+      <div id="rest-display" class="rest-pill hide">⏸ <span id="rest-timer-val">0:00</span></div>
     </div>
-    <button class="btn btn-sm btn-success" onclick="finishWorkout()" style="padding:6px 12px">✓ Fim</button>
+    <div class="aw-timer" id="aw-timer" onclick="minimizeTimer()" title="Minimizar">00:00</div>
+    <div class="aw-actions">
+      <button class="aw-btn-finish" onclick="finishWorkout()">✓ Finalizar</button>
+      <button class="aw-btn-cancel" onclick="cancelWorkout()">✕</button>
+    </div>
   </div>
   <div class="aw-body" id="aw-body">
     <div class="flex gap8 mb12">
@@ -1119,6 +1170,7 @@ function applyMode() {
     showTab('home');
     loadWorkouts();
     loadMyTrainers();
+    loadPrograms().then(() => renderTrainView());
   }
 }
 
@@ -1129,7 +1181,7 @@ function showTab(tab) {
 
   // Update nav active state
   const navMap = {
-    'home':'nav-home','history':'nav-history','trainers':'nav-trainers',
+    'home':'nav-home','train':'nav-train','history':'nav-history','trainers':'nav-trainers',
     'phases':'nav-phases','profile':'nav-profile',
     'trainer-dashboard':'nav-t-dashboard','programs':'nav-t-programs'
   };
@@ -1149,13 +1201,14 @@ function showTab(tab) {
 
   // Update header title
   const titles = {
-    'home':'GymLog','history':'Histórico','trainers':'Treinadores',
+    'home':'GymLog','train':'Treinar','history':'Histórico','trainers':'Treinadores',
     'phases':'Fases de Treino','profile':'Perfil',
     'trainer-dashboard':'Meus Alunos','programs':'Programas'
   };
   document.getElementById('header-title').textContent = titles[tab] || '';
 
   if(tab==='history') renderHistory();
+  if(tab==='train')   renderTrainView();
   if(tab==='trainers') renderMyTrainers();
   if(tab==='phases') { renderPhases(); populatePhaseSelect(); }
 }
@@ -1178,16 +1231,69 @@ async function loadWorkouts() {
 function renderHomeStats() {
   const now = new Date();
   const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate()-7);
-  const monthAgo = new Date(); monthAgo.setMonth(monthAgo.getMonth()-1);
-  const weekCount = S.workouts.filter(w => new Date(w.date) >= weekAgo).length;
-  const monthCount = S.workouts.filter(w => new Date(w.date) >= monthAgo).length;
-  document.getElementById('stat-week').textContent = weekCount;
-  document.getElementById('stat-month').textContent = monthCount;
+  const weekCount = S.workouts.filter(w => new Date(w.date+'T12:00:00') >= weekAgo).length;
+
+  // Streak: consecutive days with at least 1 workout going back from today
+  const dateSet = new Set(S.workouts.map(w => w.date));
+  let streak = 0;
+  const d = new Date(); d.setHours(0,0,0,0);
+  // If no workout today yet, start from yesterday
+  const todayStr = d.toISOString().split('T')[0];
+  if(!dateSet.has(todayStr)) d.setDate(d.getDate()-1);
+  while(true) {
+    const ds = d.toISOString().split('T')[0];
+    if(!dateSet.has(ds)) break;
+    streak++; d.setDate(d.getDate()-1);
+    if(streak > 365) break;
+  }
+
   document.getElementById('stat-total').textContent = S.workouts.length;
-  // Greeting
+  document.getElementById('stat-week').textContent  = weekCount;
+  document.getElementById('stat-streak').textContent = streak;
+
   const h = new Date().getHours();
   const greet = h<12 ? 'Bom dia' : h<18 ? 'Boa tarde' : 'Boa noite';
-  document.getElementById('home-greeting').textContent = `${greet}, ${(S.profile?.name||'').split(' ')[0] || ''}!`;
+  document.getElementById('home-greeting').textContent = `👋 ${greet}`;
+  document.getElementById('home-name').textContent = (S.profile?.name||'').split(' ')[0] || '';
+
+  renderNextWorkoutCard();
+}
+
+function renderNextWorkoutCard() {
+  const el = document.getElementById('next-workout-area');
+  if(!el) return;
+  // Try to find next program day from saved programs
+  const prog = S.programs?.[0];
+  if(!prog || !(prog.days||[]).length) {
+    // No program: show simple start button
+    el.innerHTML = `<div class="next-workout-card">
+      <div class="next-workout-badge nwb-default">Treino Livre</div>
+      <div class="next-workout-title">Iniciar Treino</div>
+      <div class="next-workout-meta">Sem programa ativo</div>
+      <button class="btn btn-primary" style="padding:10px 20px" onclick="showTab('train')">INICIAR →</button>
+    </div>`;
+    return;
+  }
+  // Determine next day: find last workout name matching a day label
+  const days = prog.days;
+  let nextDi = 0;
+  if(S.workouts.length) {
+    const lastName = S.workouts[0].name;
+    const lastDi = days.findIndex(d => lastName.includes(d.label||''));
+    if(lastDi >= 0) nextDi = (lastDi + 1) % days.length;
+  }
+  const day = days[nextDi];
+  const label = day.label || `Dia ${nextDi+1}`;
+  const isUpper = /upper|superior|empurrar|peito|ombro/i.test(label+prog.name);
+  const isLower = /lower|inferior|perna|quad|agacha/i.test(label+prog.name);
+  const badgeCls = isUpper ? 'nwb-upper' : isLower ? 'nwb-lower' : 'nwb-default';
+  const emphasis = day.exercises?.[0]?.notes?.split('—')?.[0]?.trim() || `${day.exercises?.length||0} exercícios`;
+  el.innerHTML = `<div class="next-workout-card">
+    <div class="next-workout-badge ${badgeCls}">${label}</div>
+    <div class="next-workout-title">${esc(prog.name)}</div>
+    <div class="next-workout-meta">${esc(emphasis)}</div>
+    <button class="btn btn-primary" style="padding:10px 24px" onclick="startProgramDay('${prog.id}',${nextDi})">INICIAR →</button>
+  </div>`;
 }
 
 function renderRecentWorkouts() {
@@ -1198,6 +1304,34 @@ function renderRecentWorkouts() {
     return;
   }
   el.innerHTML = recent.map(w => workoutCardHTML(w)).join('');
+}
+
+function renderTrainView() {
+  const grid = document.getElementById('train-day-grid');
+  if(!grid) return;
+  const prog = S.programs?.[0];
+  if(!prog || !(prog.days||[]).length) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">📋</div><div class="empty-title">Sem programa ativo</div><div class="empty-text">Use um programa da biblioteca ou peça ao seu treinador.</div></div>`;
+    return;
+  }
+  const days = prog.days;
+  grid.innerHTML = days.map((day, di) => {
+    const label = day.label || `Dia ${di+1}`;
+    const isUpper = /upper|superior|empurrar|peito|ombro/i.test(label);
+    const isLower = /lower|inferior|perna|quad|agacha/i.test(label);
+    const color = isUpper ? 'var(--upper-color)' : isLower ? 'var(--lower-color)' : 'var(--primary)';
+    const typeLabel = isUpper ? 'UPPER' : isLower ? 'LOWER' : 'FULL';
+    const exCount = (day.exercises||[]).length;
+    // Short label: text before " — " separator, max 2 words
+    const shortLabel = label.split('—')[0].trim().split(' ').slice(0,2).join(' ');
+    // Use startProgramDay(progId, di) — safe, no JSON in onclick
+    return `<div class="day-card day-card-hover" onclick="startProgramDay('${esc(prog.id)}',${di})">
+      <div class="day-card-accent" style="background:${color}"></div>
+      <div class="day-card-type" style="color:${color}"><div class="day-card-dot" style="background:${color}"></div>${typeLabel}</div>
+      <div class="day-card-name">${esc(shortLabel)}</div>
+      <div class="day-card-meta">${exCount} exercícios</div>
+    </div>`;
+  }).join('');
 }
 
 function renderHistory() {
@@ -1219,20 +1353,23 @@ function workoutCardHTML(w) {
   const hasPR = ex.some(e => (e.sets||[]).some(s => s.is_pr));
   const dur = w.duration ? `${w.duration}min` : '';
   const dateStr = formatDate(w.date);
-  const effortDots = w.effort ? Array.from({length:5},(_,i)=>`<div class="effort-dot${i<w.effort?' filled':''}"></div>`).join('') : '';
-  return `<div class="workout-card" onclick="openWorkoutDetail('${w.id}')">
-    <div class="workout-card-header">
-      <div>
-        <div class="workout-name">${esc(w.name)}</div>
-        <div class="workout-date">${dateStr}</div>
-      </div>
-      ${hasPR ? '<span class="pr-badge">⭐ PR</span>' : ''}
+  // Avatar: initials from workout name, color by upper/lower/default
+  const isUpper = /upper|superior|empurrar|peito|ombro/i.test(w.name);
+  const isLower = /lower|inferior|perna|quad|agacha/i.test(w.name);
+  const avatarColor = isUpper ? 'var(--upper-color)' : isLower ? 'var(--lower-color)' : 'var(--primary)';
+  const avatarTxt = (w.name||'T').split(/[\s\-—]+/).slice(0,2).map(p=>p[0]).join('').toUpperCase();
+  // Volume: total weight lifted
+  const volume = ex.reduce((sum,e) => sum + (e.sets||[]).reduce((s2,s) => s2 + ((parseFloat(s.weight)||0)*(parseInt(s.reps)||0)),0),0);
+  const volStr = volume > 0 ? (volume >= 1000 ? `${(volume/1000).toFixed(1)}t` : `${Math.round(volume)}kg`) : `${totalSets} séries`;
+  return `<div class="workout-card" onclick="openWorkoutDetail('${w.id}')" style="display:flex;align-items:center;gap:14px;padding:14px 16px">
+    <div class="wc-avatar" style="background:${avatarColor};color:var(--bg);flex-shrink:0;width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;letter-spacing:-.5px">${avatarTxt}</div>
+    <div style="flex:1;min-width:0">
+      <div class="workout-name" style="font-size:15px;font-weight:700;margin-bottom:2px">${esc(w.name)}</div>
+      <div class="workout-date" style="font-size:12px;color:var(--muted)">${dateStr}${dur ? ` · ${dur}` : ''}${ex.length ? ` · ${ex.length} exerc.` : ''}</div>
     </div>
-    <div class="workout-meta">
-      <span>📦 ${ex.length} exerc.</span>
-      <span>🔁 ${totalSets} séries</span>
-      ${dur ? `<span>⏱ ${dur}</span>` : ''}
-      ${effortDots ? `<span><div class="effort-dots">${effortDots}</div></span>` : ''}
+    <div style="text-align:right;flex-shrink:0">
+      <div class="wc-volume" style="font-size:15px;font-weight:800;color:var(--primary)">${volStr}</div>
+      ${hasPR ? '<div class="pr-badge" style="font-size:10px;margin-top:2px">⭐ PR</div>' : '<div style="font-size:10px;color:transparent">·</div>'}
     </div>
   </div>`;
 }
@@ -1318,6 +1455,16 @@ function openActiveWorkout(programDay=null) {
     effort: 0, bodyweight:'', notes:''
   };
   document.getElementById('aw-name').value = S.activeWorkout.name;
+  // Badge: classify by upper/lower/livre
+  const _n = S.activeWorkout.name;
+  const _isUpper = /upper|superior|empurrar|peito|ombro/i.test(_n);
+  const _isLower = /lower|inferior|perna|quad|agacha/i.test(_n);
+  const _badge = document.getElementById('aw-badge');
+  if(_badge) {
+    _badge.textContent = _isUpper ? 'UPPER' : _isLower ? 'LOWER' : (programDay ? 'PROGRAMA' : 'LIVRE');
+    _badge.style.background = _isUpper ? 'var(--upper-color)' : _isLower ? 'var(--lower-color)' : 'var(--primary)';
+    _badge.style.color = 'var(--bg)';
+  }
   renderActiveWorkout();
   startTimer();
   document.getElementById('view-active-workout').classList.add('open');
