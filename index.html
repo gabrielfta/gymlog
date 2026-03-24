@@ -354,6 +354,50 @@ input:checked+.slider:before{transform:translateX(20px)}
 /* ===== REST TIMER ===== */
 .rest-pill{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.25);color:var(--primary);font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}
 
+/* ===== REST COUNTDOWN BANNER ===== */
+#rest-countdown-banner{position:fixed;bottom:76px;left:50%;transform:translateX(-50%);z-index:300;background:var(--card2);border:1px solid var(--border);border-radius:16px;padding:10px 18px;display:none;align-items:center;gap:12px;box-shadow:0 4px 24px rgba(0,0,0,.5);min-width:260px;max-width:360px}
+#rest-countdown-banner.show{display:flex}
+.rcd-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.rcd-time{font-size:28px;font-weight:900;font-variant-numeric:tabular-nums;color:var(--primary);letter-spacing:-1px;flex:1;text-align:center}
+.rcd-time.warning{color:var(--warning)}
+.rcd-time.danger{color:var(--danger)}
+.rcd-adj{background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;font-weight:700;padding:5px 10px;cursor:pointer}
+.rcd-skip{background:var(--primary);color:var(--primary-txt);border:none;border-radius:8px;font-size:11px;font-weight:800;padding:5px 12px;cursor:pointer;text-transform:uppercase;letter-spacing:.04em}
+
+/* ===== SET DONE BUTTON ===== */
+.set-done-btn{background:rgba(16,185,129,.1);border:1.5px solid rgba(16,185,129,.3);color:var(--success);border-radius:8px;padding:4px 8px;font-size:14px;font-weight:800;cursor:pointer;transition:all var(--trans);line-height:1}
+.set-done-btn:active{background:var(--success);color:#fff;transform:scale(.95)}
+.set-done-btn.done{background:var(--success);color:#fff;border-color:var(--success)}
+
+/* ===== COPY TO REMAINING ===== */
+.copy-rem-btn{background:none;border:1px dashed var(--border);color:var(--muted);border-radius:6px;padding:2px 6px;font-size:11px;cursor:pointer;white-space:nowrap}
+.copy-rem-btn:hover{border-color:var(--primary);color:var(--primary)}
+
+/* ===== AUTO PR BADGE ===== */
+.pr-auto{display:inline-flex;align-items:center;gap:2px;background:rgba(212,255,0,.15);border:1px solid rgba(212,255,0,.4);color:var(--primary);border-radius:999px;padding:2px 7px;font-size:10px;font-weight:800;letter-spacing:.04em;animation:prPop .3s ease}
+@keyframes prPop{0%{transform:scale(0.7);opacity:0}60%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}
+
+/* ===== SENSATION BAR ===== */
+.sensation-bar{display:flex;gap:6px;padding:8px 14px;border-top:1px solid var(--border)}
+.sensation-btn{flex:1;padding:6px 4px;border-radius:8px;border:1.5px solid var(--border);background:transparent;color:var(--muted);font-size:11px;font-weight:700;text-align:center;cursor:pointer;transition:all var(--trans);text-transform:uppercase;letter-spacing:.03em}
+.sensation-btn:active{transform:scale(.96)}
+.sensation-btn.sel-leve{background:rgba(16,185,129,.15);border-color:var(--success);color:var(--success)}
+.sensation-btn.sel-normal{background:rgba(212,255,0,.15);border-color:var(--primary);color:var(--primary)}
+.sensation-btn.sel-pesado{background:rgba(245,158,11,.15);border-color:var(--warning);color:var(--warning)}
+.sensation-btn.sel-falha{background:rgba(239,68,68,.15);border-color:var(--danger);color:var(--danger)}
+
+/* ===== EXERCISE EXTRA FIELDS ===== */
+.ex-extra{padding:8px 14px 12px;display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--border)}
+.ex-extra-row{display:flex;align-items:flex-start;gap:8px}
+.ex-extra-icon{font-size:14px;padding-top:10px;flex-shrink:0;width:20px;text-align:center}
+.ex-instructions{background:rgba(212,255,0,.04);border:1px dashed rgba(212,255,0,.2);border-radius:6px;padding:8px 10px;font-size:12px;color:var(--muted);font-style:italic;line-height:1.5;min-height:36px}
+.ex-link-input{font-size:12px;padding:8px 10px;height:36px}
+
+/* ===== REORDER BUTTONS ===== */
+.move-btn{background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;padding:2px 5px;border-radius:4px;line-height:1}
+.move-btn:hover{color:var(--text);background:var(--card)}
+.move-btn:disabled{opacity:.2;cursor:default}
+
 /* ===== TIMER PILL (minimized) ===== */
 #timer-pill{position:fixed;top:12px;right:12px;z-index:250;background:var(--primary);color:#fff;border-radius:999px;padding:8px 16px;font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.4);display:none;align-items:center;gap:8px}
 #timer-pill.show{display:flex}
@@ -687,6 +731,17 @@ input:checked+.slider:before{transform:translateX(20px)}
   </div>
 </div>
 
+<!-- ===== REST COUNTDOWN BANNER ===== -->
+<div id="rest-countdown-banner">
+  <div>
+    <div class="rcd-label">Descanso</div>
+  </div>
+  <div class="rcd-time" id="rcd-time">1:30</div>
+  <button class="rcd-adj" onclick="adjustRest(-30)">−30s</button>
+  <button class="rcd-adj" onclick="adjustRest(30)">+30s</button>
+  <button class="rcd-skip" onclick="skipRest()">Pular</button>
+</div>
+
 <!-- ===== TIMER PILL (minimized) ===== -->
 <div id="timer-pill" onclick="maximizeTimer()">
   <div class="timer-dot"></div>
@@ -800,7 +855,11 @@ input:checked+.slider:before{transform:translateX(20px)}
         <label>Notas gerais</label>
         <textarea id="finish-notes" placeholder="Como você se sentiu? O que funcionou bem?"></textarea>
       </div>
-      <button class="btn btn-primary btn-block" onclick="confirmFinishWorkout()">Salvar treino ✓</button>
+      <div style="display:flex;align-items:center;gap:10px;padding:4px 0">
+        <input type="checkbox" id="finish-save-template" style="width:18px;height:18px;accent-color:var(--primary);flex-shrink:0;cursor:pointer">
+        <label for="finish-save-template" style="font-size:14px;font-weight:600;cursor:pointer;color:var(--text)">💾 Salvar como template de programa</label>
+      </div>
+      <button class="btn btn-primary btn-block" id="btn-confirm-finish" onclick="confirmFinishWorkout()">Salvar treino ✓</button>
       <button class="btn btn-ghost btn-block" onclick="closeModal('modal-finish')">Voltar</button>
     </div>
   </div>
@@ -1448,8 +1507,12 @@ function openActiveWorkout(programDay=null) {
   S.activeWorkout = {
     name: programDay?.label || 'Treino',
     exercises: programDay ? (programDay.exercises||[]).map(e => ({
-      name: e.name, notes: e.notes||'',
-      sets: Array.from({length: parseInt(e.sets)||3}, () => ({weight:'',reps:e.reps||'',rpe:'',is_pr:false}))
+      name: e.name,
+      notes: '',
+      instructions: e.notes || '', // program notes become coach instructions
+      youtube: e.youtube || '',
+      sensation: '',
+      sets: Array.from({length: parseInt(e.sets)||3}, () => ({weight:'',reps:e.reps||'',rpe:'',is_pr:false,type:'normal',done:false}))
     })) : [],
     startedAt: Date.now(),
     effort: 0, bodyweight:'', notes:''
@@ -1530,7 +1593,7 @@ function cancelWorkout() {
 }
 
 function addExercise() {
-  S.activeWorkout.exercises.push({ name:'', sets:[{weight:'',reps:'',rpe:'',is_pr:false}] });
+  S.activeWorkout.exercises.push({ name:'', notes:'', instructions:'', youtube:'', sensation:'', sets:[{weight:'',reps:'',rpe:'',is_pr:false,type:'normal',done:false}] });
   renderActiveWorkout();
   // Focus new exercise name
   setTimeout(() => {
@@ -1569,61 +1632,104 @@ const SET_TYPES = [
 
 function renderActiveWorkout() {
   const container = document.getElementById('aw-exercises');
-  container.innerHTML = S.activeWorkout.exercises.map((ex, ei) => `
-    <div class="exercise-block">
+  const total = S.activeWorkout.exercises.length;
+  container.innerHTML = S.activeWorkout.exercises.map((ex, ei) => {
+    const sen = ex.sensation || '';
+    const sensationBtns = [
+      {v:'leve',  label:'💚 Leve'},
+      {v:'normal',label:'🟡 Normal'},
+      {v:'pesado',label:'🟠 Pesado'},
+      {v:'falha', label:'🔴 Falha'},
+    ].map(b => `<button class="sensation-btn${sen===b.v?' sel-'+b.v:''}" onclick="setExSensation(${ei},'${b.v}')">${b.label}</button>`).join('');
+
+    const setsHTML = ex.sets.map((s, si) => {
+      const hasCargo = s.weight && s.reps;
+      const isLast = si === ex.sets.length - 1;
+      const copyBtn = hasCargo && !isLast
+        ? `<button class="copy-rem-btn" onclick="copyToRemaining(${ei},${si})" title="Copiar peso/reps para séries abaixo">↓ repetir</button>`
+        : `<span style="min-width:54px;display:inline-block"></span>`;
+      const prBadge = s.is_pr ? `<span class="pr-auto">⭐ PR</span>` : '';
+      const doneClass = s.done ? ' done' : '';
+      return `
+        <tr>
+          <td style="color:var(--muted);font-size:12px;font-weight:700;padding-left:8px">${si+1}</td>
+          <td>
+            <div class="stepper">
+              <button class="stepper-btn" onclick="stepSet(${ei},${si},'weight',-0.5)">−</button>
+              <input class="stepper-val" type="number" value="${s.weight||''}" placeholder="kg" min="0" step="0.5"
+                oninput="updateSet(${ei},${si},'weight',this.value)">
+              <button class="stepper-btn" onclick="stepSet(${ei},${si},'weight',0.5)">+</button>
+            </div>
+          </td>
+          <td>
+            <div class="stepper">
+              <button class="stepper-btn" onclick="stepSet(${ei},${si},'reps',-1)">−</button>
+              <input class="stepper-val" type="number" value="${s.reps||''}" placeholder="rep" min="0"
+                oninput="updateSet(${ei},${si},'reps',this.value)">
+              <button class="stepper-btn" onclick="stepSet(${ei},${si},'reps',1)">+</button>
+            </div>
+          </td>
+          <td><select class="set-type-select ${s.type||'normal'}" onchange="setSetType(${ei},${si},this.value);this.className='set-type-select '+this.value">
+            <option value="normal"${(s.type||'normal')==='normal'?' selected':''}>Normal</option>
+            <option value="warmup"${s.type==='warmup'?' selected':''}>Aquec.</option>
+            <option value="test"${s.type==='test'?' selected':''}>Teste</option>
+            <option value="failure"${s.type==='failure'?' selected':''}>Falha</option>
+            <option value="drop"${s.type==='drop'?' selected':''}>Drop</option>
+          </select></td>
+          <td style="white-space:nowrap">
+            ${prBadge}
+            <button class="set-done-btn${doneClass}" onclick="doneSet(${ei},${si})">${s.done?'✓':'✓'}</button>
+          </td>
+          <td style="white-space:nowrap">
+            ${copyBtn}
+            <button class="del-set-btn" onclick="removeSet(${ei},${si})">✕</button>
+          </td>
+        </tr>`;
+    }).join('');
+
+    const instructions = ex.instructions ? `
+      <div class="ex-extra-row">
+        <div class="ex-extra-icon">📋</div>
+        <div class="ex-instructions">${esc(ex.instructions)}</div>
+      </div>` : '';
+
+    return `<div class="exercise-block">
       <div class="exercise-header">
+        <div style="display:flex;align-items:center;gap:4px">
+          <button class="move-btn" onclick="moveExercise(${ei},-1)" ${ei===0?'disabled':''}>↑</button>
+          <button class="move-btn" onclick="moveExercise(${ei},1)" ${ei===total-1?'disabled':''}>↓</button>
+        </div>
         <input class="exercise-name-input" type="text" value="${esc(ex.name)}" placeholder="Nome do exercício"
-          data-ei="${ei}" oninput="S.activeWorkout.exercises[${ei}].name=this.value" autocomplete="off">
-        <button class="btn btn-icon btn-ghost btn-sm" onclick="removeExercise(${ei})" style="border:none;color:var(--danger)">✕</button>
+          data-ei="${ei}" oninput="S.activeWorkout.exercises[${ei}].name=this.value" autocomplete="off" style="margin:0 6px">
+        <button class="btn btn-icon btn-ghost btn-sm" onclick="removeExercise(${ei})" style="border:none;color:var(--danger);flex-shrink:0">✕</button>
       </div>
       <table class="sets-table">
         <thead><tr>
-          <th>#</th><th>Peso (kg)</th><th>Reps</th><th>RPE</th><th>Tipo</th><th>PR</th><th></th>
+          <th style="width:28px">#</th><th>Peso</th><th>Reps</th><th>Tipo</th><th>✓</th><th></th>
         </tr></thead>
-        <tbody>
-        ${ex.sets.map((s,si) => `
-          <tr>
-            <td style="color:var(--muted);font-size:12px;font-weight:700">${si+1}</td>
-            <td>
-              <div class="stepper">
-                <button class="stepper-btn" onclick="stepSet(${ei},${si},'weight',-0.5)">−</button>
-                <input class="stepper-val" type="number" value="${s.weight||''}" placeholder="kg" min="0" step="0.5"
-                  oninput="updateSet(${ei},${si},'weight',this.value)">
-                <button class="stepper-btn" onclick="stepSet(${ei},${si},'weight',0.5)">+</button>
-              </div>
-            </td>
-            <td>
-              <div class="stepper">
-                <button class="stepper-btn" onclick="stepSet(${ei},${si},'reps',-1)">−</button>
-                <input class="stepper-val" type="number" value="${s.reps||''}" placeholder="rep" min="0"
-                  oninput="updateSet(${ei},${si},'reps',this.value)">
-                <button class="stepper-btn" onclick="stepSet(${ei},${si},'reps',1)">+</button>
-              </div>
-            </td>
-            <td><select class="rpe-select" onchange="updateSet(${ei},${si},'rpe',this.value)">
-              <option value="">–</option>
-              ${[6,6.5,7,7.5,8,8.5,9,9.5,10].map(r=>`<option value="${r}"${s.rpe==r?' selected':''}>${r}</option>`).join('')}
-            </select></td>
-            <td><select class="set-type-select ${s.type||'normal'}" onchange="setSetType(${ei},${si},this.value);this.className='set-type-select '+this.value">
-              <option value="normal"${(s.type||'normal')==='normal'?' selected':''}>Normal</option>
-              <option value="warmup"${s.type==='warmup'?' selected':''}>Aquec.</option>
-              <option value="test"${s.type==='test'?' selected':''}>Teste</option>
-              <option value="failure"${s.type==='failure'?' selected':''}>Falha</option>
-              <option value="drop"${s.type==='drop'?' selected':''}>Drop</option>
-            </select></td>
-            <td><span style="cursor:pointer;font-size:16px" onclick="togglePR(${ei},${si})">${s.is_pr?'⭐':'☆'}</span></td>
-            <td><button class="del-set-btn" onclick="removeSet(${ei},${si})">✕</button></td>
-          </tr>`).join('')}
-        </tbody>
+        <tbody>${setsHTML}</tbody>
       </table>
       <div class="add-set-row">
         <button class="btn btn-ghost btn-sm" onclick="addSet(${ei})">+ Série</button>
       </div>
-      <div style="padding:6px 14px 10px">
-        <textarea rows="2" placeholder="📝  Instruções, técnica, peso alvo..." style="font-size:13px;resize:none;width:100%;box-sizing:border-box;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);min-height:unset"
-          oninput="S.activeWorkout.exercises[${ei}].notes=this.value">${esc(ex.notes||'')}</textarea>
+      <div class="sensation-bar">${sensationBtns}</div>
+      <div class="ex-extra">
+        ${instructions}
+        <div class="ex-extra-row">
+          <div class="ex-extra-icon">📝</div>
+          <textarea rows="2" placeholder="Suas observações..." style="font-size:13px;resize:none;flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);min-height:unset;font-family:inherit"
+            oninput="S.activeWorkout.exercises[${ei}].notes=this.value">${esc(ex.notes||'')}</textarea>
+        </div>
+        <div class="ex-extra-row">
+          <div class="ex-extra-icon">🔗</div>
+          <input class="ex-link-input" type="url" placeholder="Link YouTube do exercício"
+            value="${esc(ex.youtube||'')}" oninput="S.activeWorkout.exercises[${ei}].youtube=this.value"
+            style="flex:1">
+          ${ex.youtube ? `<a href="${esc(ex.youtube)}" target="_blank" style="font-size:20px;text-decoration:none;padding-left:6px">▶</a>` : ''}
+        </div>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 function stepSet(ei, si, field, delta) {
@@ -1650,27 +1756,44 @@ function updateSet(ei, si, field, val) {
   }
 }
 
+// 1RM estimate using Epley formula: w * (1 + reps/30)
+function calc1RM(weight, reps) {
+  const w = parseFloat(weight) || 0;
+  const r = parseInt(reps) || 1;
+  if(!w) return 0;
+  return w * (1 + r / 30);
+}
+
 function checkPR(ei, si) {
   const ex = S.activeWorkout.exercises[ei];
-  const setW = parseFloat(ex.sets[si].weight);
-  if(!setW) return;
-  // Check against history
+  const s = ex.sets[si];
+  const est1RM = calc1RM(s.weight, s.reps);
+  if(!est1RM) return;
   const exName = ex.name.toLowerCase().trim();
   if(!exName) return;
-  let maxHist = 0;
+  // Best historical 1RM for this exercise
+  let maxHist1RM = 0;
   S.workouts.forEach(w => {
     (w.exercises||[]).forEach(e => {
       if((e.name||'').toLowerCase().trim()===exName) {
-        (e.sets||[]).forEach(s => { const w2=parseFloat(s.weight); if(w2>maxHist) maxHist=w2; });
+        (e.sets||[]).forEach(hs => {
+          const e1 = calc1RM(hs.weight, hs.reps);
+          if(e1 > maxHist1RM) maxHist1RM = e1;
+        });
       }
     });
   });
-  // Also check within current workout (other sets)
-  let maxCurrent = 0;
-  ex.sets.forEach((s,i) => { if(i!==si) { const w2=parseFloat(s.weight); if(w2>maxCurrent) maxCurrent=w2; } });
-  const isPR = setW > Math.max(maxHist, maxCurrent);
-  if(isPR !== ex.sets[si].is_pr) {
-    ex.sets[si].is_pr = isPR;
+  // Best 1RM in current workout (other sets of same exercise)
+  let maxCurrent1RM = 0;
+  ex.sets.forEach((hs, i) => {
+    if(i !== si) {
+      const e1 = calc1RM(hs.weight, hs.reps);
+      if(e1 > maxCurrent1RM) maxCurrent1RM = e1;
+    }
+  });
+  const isPR = est1RM > Math.max(maxHist1RM, maxCurrent1RM);
+  if(isPR !== s.is_pr) {
+    s.is_pr = isPR;
     renderActiveWorkout();
   }
 }
@@ -1680,6 +1803,114 @@ function togglePR(ei, si) {
   renderActiveWorkout();
 }
 
+// ---- NEW FUNCTIONS ----
+
+function doneSet(ei, si) {
+  const s = S.activeWorkout.exercises[ei].sets[si];
+  s.done = !s.done;
+  s.loggedAt = s.done ? Date.now() : null;
+  S.lastSetTime = Date.now();
+  checkPR(ei, si);
+  renderActiveWorkout();
+  if(s.done) startRestCountdown(90); // default 90s rest
+}
+
+function copyToRemaining(ei, si) {
+  const sets = S.activeWorkout.exercises[ei].sets;
+  const src = sets[si];
+  for(let i = si + 1; i < sets.length; i++) {
+    sets[i].weight = src.weight;
+    sets[i].reps   = src.reps;
+  }
+  renderActiveWorkout();
+}
+
+function moveExercise(ei, dir) {
+  const exs = S.activeWorkout.exercises;
+  const target = ei + dir;
+  if(target < 0 || target >= exs.length) return;
+  [exs[ei], exs[target]] = [exs[target], exs[ei]];
+  renderActiveWorkout();
+}
+
+function setExSensation(ei, val) {
+  const ex = S.activeWorkout.exercises[ei];
+  ex.sensation = ex.sensation === val ? '' : val; // toggle off if same
+  renderActiveWorkout();
+}
+
+// ---- REST COUNTDOWN ----
+let _restInterval = null;
+let _restRemaining = 0;
+
+function startRestCountdown(seconds) {
+  clearInterval(_restInterval);
+  _restRemaining = seconds;
+  const banner = document.getElementById('rest-countdown-banner');
+  if(!banner) return;
+  banner.classList.add('show');
+  _updateRestCountdownDisplay();
+  _restInterval = setInterval(() => {
+    _restRemaining--;
+    _updateRestCountdownDisplay();
+    if(_restRemaining <= 0) {
+      clearInterval(_restInterval);
+      banner.classList.remove('show');
+      // vibrate if supported
+      if(navigator.vibrate) navigator.vibrate([200, 100, 200]);
+    }
+  }, 1000);
+}
+
+function _updateRestCountdownDisplay() {
+  const el = document.getElementById('rcd-time');
+  if(!el) return;
+  const m = Math.floor(Math.abs(_restRemaining) / 60);
+  const s = (Math.abs(_restRemaining) % 60).toString().padStart(2,'0');
+  el.textContent = `${m}:${s}`;
+  el.className = 'rcd-time' + (_restRemaining <= 10 ? ' danger' : _restRemaining <= 30 ? ' warning' : '');
+}
+
+function adjustRest(delta) {
+  _restRemaining = Math.max(5, _restRemaining + delta);
+  _updateRestCountdownDisplay();
+}
+
+function skipRest() {
+  clearInterval(_restInterval);
+  const banner = document.getElementById('rest-countdown-banner');
+  if(banner) banner.classList.remove('show');
+}
+
+// ---- SAVE AS TEMPLATE ----
+async function saveWorkoutAsTemplate(workout) {
+  const progName = prompt('Nome do template de programa (ex: "Meu Upper A"):',
+    workout.name || 'Meu Template');
+  if(!progName) return;
+  const day = {
+    label: workout.name,
+    exercises: (workout.exercises || []).map(e => ({
+      name: e.name,
+      sets: e.sets?.length || 3,
+      reps: e.sets?.[0]?.reps || '',
+      notes: e.instructions || e.notes || ''
+    }))
+  };
+  const prog = {
+    created_by: S.user.id,
+    name: progName,
+    description: `Gerado a partir do treino "${workout.name}"`,
+    objective: '',
+    days: [day]
+  };
+  const { error } = await db.from('workout_programs').insert(prog);
+  if(error) { toast('Erro ao salvar template: ' + error.message, 'error'); return; }
+  // Refresh programs
+  await loadPrograms();
+  renderTrainView();
+  toast('Template salvo! Disponível na aba Treinar ✓', 'success');
+}
+
 function finishWorkout() {
   if(!S.activeWorkout.exercises.length) { toast('Adicione ao menos um exercício.','error'); return; }
   S.currentEffort = 0;
@@ -1687,6 +1918,10 @@ function finishWorkout() {
   document.getElementById('effort-label').textContent = 'Selecione o esforço';
   document.getElementById('finish-bodyweight').value = '';
   document.getElementById('finish-notes').value = '';
+  const chk = document.getElementById('finish-save-template');
+  if(chk) chk.checked = false;
+  const btn = document.getElementById('btn-confirm-finish');
+  if(btn) { btn.disabled = false; btn.textContent = 'Salvar treino ✓'; }
   openModal('modal-finish');
 }
 
@@ -1697,49 +1932,82 @@ function setEffort(v) {
 }
 
 async function confirmFinishWorkout() {
-  const duration = stopTimer();
-  S.activeWorkout.name = document.getElementById('aw-name').value.trim() || 'Treino';
-  S.activeWorkout.effort = S.currentEffort;
-  S.activeWorkout.bodyweight = document.getElementById('finish-bodyweight').value;
-  S.activeWorkout.notes = document.getElementById('finish-notes').value.trim();
+  // Disable button to prevent double-submit
+  const btn = document.getElementById('btn-confirm-finish');
+  if(btn) { btn.disabled = true; btn.textContent = 'Salvando...'; }
 
-  // Clean exercises
-  const exercises = S.activeWorkout.exercises
-    .filter(e => e.name.trim())
-    .map(e => ({ ...e, sets: e.sets.filter(s => s.reps||s.weight) }));
+  try {
+    const duration = stopTimer();
+    skipRest(); // hide rest countdown if open
+    S.activeWorkout.name = document.getElementById('aw-name').value.trim() || 'Treino';
+    S.activeWorkout.effort = S.currentEffort;
+    S.activeWorkout.bodyweight = document.getElementById('finish-bodyweight').value;
+    S.activeWorkout.notes = document.getElementById('finish-notes').value.trim();
 
-  const payload = {
-    user_id: S.user.id,
-    name: S.activeWorkout.name,
-    date: new Date().toISOString().split('T')[0],
-    started_at: new Date(S.activeWorkout.startedAt).toISOString(),
-    ended_at: new Date().toISOString(),
-    duration,
-    exercises,
-    effort: S.currentEffort || null,
-    bodyweight: parseFloat(S.activeWorkout.bodyweight) || null,
-    notes: S.activeWorkout.notes,
-  };
+    // Clean exercises (strip sensation/youtube from set data, keep in exercise)
+    const exercises = S.activeWorkout.exercises
+      .filter(e => (e.name||'').trim())
+      .map(e => ({
+        name: e.name,
+        notes: e.notes || '',
+        instructions: e.instructions || '',
+        youtube: e.youtube || '',
+        sensation: e.sensation || '',
+        sets: (e.sets || []).filter(s => s.reps || s.weight).map(s => ({
+          weight: s.weight, reps: s.reps, rpe: s.rpe,
+          is_pr: s.is_pr || false, type: s.type || 'normal',
+          loggedAt: s.loggedAt || null, done: s.done || false
+        }))
+      }));
 
-  // Add phase if selected
-  const phaseId = document.getElementById('aw-phase-select')?.value || null;
-  if(phaseId) payload.phase_id = phaseId;
+    if(!exercises.length) {
+      toast('Adicione ao menos um exercício com nome.', 'error');
+      if(btn) { btn.disabled = false; btn.textContent = 'Salvar treino ✓'; }
+      return;
+    }
 
-  const { data, error } = await db.from('workouts').insert(payload).select().single();
-  if(error) { toast('Erro ao salvar: ' + error.message, 'error'); return; }
+    const payload = {
+      user_id: S.user.id,
+      name: S.activeWorkout.name,
+      date: new Date().toISOString().split('T')[0],
+      started_at: new Date(S.activeWorkout.startedAt).toISOString(),
+      ended_at: new Date().toISOString(),
+      duration,
+      exercises,
+      effort: S.currentEffort || null,
+      bodyweight: parseFloat(S.activeWorkout.bodyweight) || null,
+      notes: S.activeWorkout.notes,
+    };
 
-  await notifyTrainersWorkoutDone(data);
+    // Add phase if selected
+    const phaseId = document.getElementById('aw-phase-select')?.value || null;
+    if(phaseId) payload.phase_id = phaseId;
 
-  S.workouts.unshift(data);
-  S._lastWorkout = data;
-  closeModal('modal-finish');
-  document.getElementById('view-active-workout').classList.remove('open');
-  document.getElementById('timer-pill').classList.remove('show');
-  document.getElementById('rest-display').classList.add('hide');
-  S.activeWorkout = null;
-  renderHomeStats();
-  renderRecentWorkouts();
-  showSummary(data);
+    const { data, error } = await db.from('workouts').insert(payload).select().single();
+    if(error) throw new Error(error.message);
+
+    await notifyTrainersWorkoutDone(data);
+
+    S.workouts.unshift(data);
+    S._lastWorkout = data;
+
+    // Save as template if checked
+    const saveTemplate = document.getElementById('finish-save-template')?.checked;
+    if(saveTemplate) await saveWorkoutAsTemplate(data);
+
+    closeModal('modal-finish');
+    document.getElementById('view-active-workout').classList.remove('open');
+    document.getElementById('timer-pill').classList.remove('show');
+    document.getElementById('rest-display').classList.add('hide');
+    S.activeWorkout = null;
+    renderHomeStats();
+    renderRecentWorkouts();
+    showSummary(data);
+
+  } catch(err) {
+    toast('Erro ao salvar: ' + err.message, 'error');
+    if(btn) { btn.disabled = false; btn.textContent = 'Salvar treino ✓'; }
+  }
 }
 
 async function notifyTrainersWorkoutDone(workout) {
