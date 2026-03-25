@@ -328,6 +328,31 @@ input:checked+.slider:before{transform:translateX(20px)}
 .set-row-detail:last-child{border-bottom:none}
 .set-num{color:var(--muted);min-width:20px;font-size:12px;font-weight:700}
 
+/* ===== CALENDAR ===== */
+.cal-wrap{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:16px}
+.cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.cal-nav-btn{background:none;border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:16px;width:36px;height:36px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:border-color var(--trans)}
+.cal-nav-btn:hover{border-color:var(--primary);color:var(--primary)}
+.cal-month-label{font-size:15px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--text)}
+.cal-dow{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:4px}
+.cal-dow-cell{text-align:center;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding:4px 0}
+.cal-grid-days{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cal-day{aspect-ratio:1;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:default;position:relative;transition:background var(--trans)}
+.cal-day.other-month{opacity:.2}
+.cal-day.today .cal-day-num{color:var(--primary);font-weight:900}
+.cal-day.today::after{content:'';position:absolute;bottom:4px;left:50%;transform:translateX(-50%);width:4px;height:4px;background:var(--primary);border-radius:50%}
+.cal-day.has-workout{cursor:pointer;background:rgba(212,255,0,.08);border:1px solid rgba(212,255,0,.2)}
+.cal-day.has-workout:active{background:rgba(212,255,0,.18);transform:scale(.95)}
+.cal-day.has-workout .cal-day-num{color:var(--primary);font-weight:800}
+.cal-day.today.has-workout{background:rgba(212,255,0,.15);border-color:var(--primary)}
+.cal-day-num{font-size:13px;font-weight:600;line-height:1}
+.cal-day-dot{width:5px;height:5px;border-radius:50%;background:var(--primary);margin-top:2px}
+.cal-day-multi{font-size:9px;font-weight:800;color:var(--primary);margin-top:1px}
+
+/* ===== HISTORY MONTH GROUP ===== */
+.hist-month-label{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;padding:16px 0 8px;border-top:1px solid var(--border);margin-top:8px}
+.hist-month-label:first-child{border-top:none;padding-top:0}
+
 /* ===== INVITE LINK ===== */
 .invite-box{background:var(--card2);border:1px solid var(--border);border-radius:var(--r);padding:14px;display:flex;align-items:center;gap:10px;word-break:break-all;font-size:13px;color:var(--muted)}
 .copy-btn{flex-shrink:0;background:var(--primary);border:none;border-radius:var(--rs);padding:7px 12px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
@@ -564,12 +589,34 @@ input:checked+.slider:before{transform:translateX(20px)}
 
   <!-- ===== HISTORY ===== -->
   <div class="view" id="tab-history">
-    <div class="mt16 mb16">
+    <!-- Calendar -->
+    <div class="mt16 mb8">
+      <div class="cal-wrap" id="cal-wrap">
+        <div class="cal-nav">
+          <button class="cal-nav-btn" onclick="calNav(-1)">‹</button>
+          <div class="cal-month-label" id="cal-month-label">—</div>
+          <button class="cal-nav-btn" onclick="calNav(1)">›</button>
+        </div>
+        <div class="cal-dow">
+          <div class="cal-dow-cell">Dom</div>
+          <div class="cal-dow-cell">Seg</div>
+          <div class="cal-dow-cell">Ter</div>
+          <div class="cal-dow-cell">Qua</div>
+          <div class="cal-dow-cell">Qui</div>
+          <div class="cal-dow-cell">Sex</div>
+          <div class="cal-dow-cell">Sáb</div>
+        </div>
+        <div class="cal-grid-days" id="cal-grid-days"></div>
+      </div>
+    </div>
+    <!-- Search -->
+    <div class="mb12">
       <div class="search-bar">
         <span class="search-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
         <input type="text" id="history-search" placeholder="Buscar treino..." oninput="filterHistory()" style="padding-left:40px">
       </div>
     </div>
+    <!-- List grouped by month -->
     <div id="history-list"></div>
   </div>
 
@@ -799,6 +846,11 @@ input:checked+.slider:before{transform:translateX(20px)}
 <!-- ===== WORKOUT DETAIL MODAL ===== -->
 <div id="modal-workout" class="modal-backdrop">
   <div class="modal" id="modal-workout-content"></div>
+</div>
+
+<!-- ===== CALENDAR DAY PICKER (multiple workouts) ===== -->
+<div id="modal-cal-day" class="modal-backdrop">
+  <div class="modal" id="modal-cal-day-content"></div>
 </div>
 
 <!-- ===== STUDENT DETAIL MODAL ===== -->
@@ -1266,7 +1318,12 @@ function showTab(tab) {
   };
   document.getElementById('header-title').textContent = titles[tab] || '';
 
-  if(tab==='history') renderHistory();
+  if(tab==='history') {
+    _calYear = new Date().getFullYear();
+    _calMonth = new Date().getMonth();
+    renderCalendar();
+    renderHistory();
+  }
   if(tab==='train')   renderTrainView();
   if(tab==='trainers') renderMyTrainers();
   if(tab==='phases') { renderPhases(); populatePhaseSelect(); }
@@ -1398,13 +1455,147 @@ function renderHistory() {
   const filtered = q ? S.workouts.filter(w => w.name.toLowerCase().includes(q)) : S.workouts;
   const el = document.getElementById('history-list');
   if(!filtered.length) {
-    el.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">Sem resultados</div><div class="empty-text">Tente outro termo de busca.</div></div>`;
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div>
+      <div class="empty-title">${q ? 'Sem resultados' : 'Nenhum treino ainda'}</div>
+      <div class="empty-text">${q ? 'Tente outro termo.' : 'Registre seu primeiro treino!'}</div></div>`;
     return;
   }
-  el.innerHTML = filtered.map(w => workoutCardHTML(w)).join('');
+  // Group by year-month
+  const groups = {};
+  filtered.forEach(w => {
+    const key = w.date.substring(0, 7); // "YYYY-MM"
+    if(!groups[key]) groups[key] = [];
+    groups[key].push(w);
+  });
+  const MONTHS_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const keys = Object.keys(groups).sort((a,b) => b.localeCompare(a));
+  el.innerHTML = keys.map(key => {
+    const [yr, mo] = key.split('-');
+    const label = `${MONTHS_PT[parseInt(mo)-1]} ${yr}`;
+    const cards = groups[key].map(w => workoutCardHTML(w)).join('');
+    return `<div class="hist-month-label">${label} <span style="color:var(--text);font-weight:600">(${groups[key].length})</span></div>${cards}`;
+  }).join('');
 }
 
 function filterHistory() { renderHistory(); }
+
+// ================================================================
+// CALENDAR
+// ================================================================
+let _calYear  = new Date().getFullYear();
+let _calMonth = new Date().getMonth(); // 0-indexed
+
+function renderCalendar() {
+  const MONTHS_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const label = document.getElementById('cal-month-label');
+  const grid  = document.getElementById('cal-grid-days');
+  if(!label || !grid) return;
+
+  label.textContent = `${MONTHS_PT[_calMonth]} ${_calYear}`;
+
+  // Build set of dates with workouts this month + how many
+  const countByDate = {};
+  S.workouts.forEach(w => {
+    if(w.date.startsWith(`${_calYear}-${String(_calMonth+1).padStart(2,'0')}`)) {
+      countByDate[w.date] = (countByDate[w.date] || 0) + 1;
+    }
+  });
+
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+
+  // First day of month (0=Sun)
+  const firstDay = new Date(_calYear, _calMonth, 1).getDay();
+  // Days in month
+  const daysInMonth = new Date(_calYear, _calMonth + 1, 0).getDate();
+  // Days in prev month
+  const daysInPrev  = new Date(_calYear, _calMonth, 0).getDate();
+
+  let cells = '';
+
+  // Leading empty cells (prev month days)
+  for(let i = 0; i < firstDay; i++) {
+    const d = daysInPrev - firstDay + 1 + i;
+    cells += `<div class="cal-day other-month"><span class="cal-day-num">${d}</span></div>`;
+  }
+
+  // Current month days
+  for(let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${_calYear}-${String(_calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const count = countByDate[dateStr] || 0;
+    const isToday = dateStr === todayStr;
+    const hasWorkout = count > 0;
+
+    let cls = 'cal-day';
+    if(isToday) cls += ' today';
+    if(hasWorkout) cls += ' has-workout';
+    if(!isToday && !hasWorkout) cls += ' other-day';
+
+    const dot = hasWorkout ? `<div class="cal-day-dot"></div>` : '';
+    const multi = hasWorkout && count > 1 ? `<div class="cal-day-multi">${count}x</div>` : '';
+    const click = hasWorkout ? `onclick="calDayClick('${dateStr}')"` : '';
+
+    cells += `<div class="${cls}" ${click}>
+      <span class="cal-day-num">${d}</span>
+      ${dot}${multi}
+    </div>`;
+  }
+
+  // Trailing empty cells (fill to complete last row)
+  const totalCells = firstDay + daysInMonth;
+  const trailing = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
+  for(let i = 1; i <= trailing; i++) {
+    cells += `<div class="cal-day other-month"><span class="cal-day-num">${i}</span></div>`;
+  }
+
+  grid.innerHTML = cells;
+}
+
+function calNav(dir) {
+  _calMonth += dir;
+  if(_calMonth > 11) { _calMonth = 0;  _calYear++; }
+  if(_calMonth < 0)  { _calMonth = 11; _calYear--; }
+  renderCalendar();
+}
+
+function calDayClick(dateStr) {
+  // Find all workouts on that date
+  const workouts = S.workouts.filter(w => w.date === dateStr);
+  if(!workouts.length) return;
+  if(workouts.length === 1) {
+    openWorkoutDetail(workouts[0].id);
+    return;
+  }
+  // Multiple workouts — show picker
+  const list = workouts.map(w =>
+    `<div class="workout-card" onclick="closeModal('modal-cal-day');openWorkoutDetail('${w.id}')"
+      style="display:flex;align-items:center;gap:12px;padding:12px 14px;cursor:pointer">
+      <div style="flex:1;font-weight:700">${esc(w.name)}</div>
+      <div class="muted small">${w.duration ? w.duration+'min' : '–'}</div>
+    </div>`).join('');
+  document.getElementById('modal-cal-day-content').innerHTML = `
+    <div class="modal-handle"></div>
+    <div class="modal-title" style="margin-bottom:12px">Treinos em ${formatDate(dateStr)}</div>
+    ${list}
+    <button class="btn btn-ghost btn-block mt12" onclick="closeModal('modal-cal-day')">Fechar</button>`;
+  openModal('modal-cal-day');
+}
+
+// ----------------------------------------------------------------
+// DELETE WORKOUT
+// ----------------------------------------------------------------
+async function deleteWorkout(id) {
+  if(!confirm('Excluir este treino permanentemente? Esta ação não pode ser desfeita.')) return;
+  const { error } = await db.from('workouts').delete().eq('id', id).eq('user_id', S.user.id);
+  if(error) { toast('Erro ao excluir: ' + error.message, 'error'); return; }
+  S.workouts = S.workouts.filter(w => w.id !== id);
+  closeModal('modal-workout');
+  renderHomeStats();
+  renderRecentWorkouts();
+  renderHistory();
+  renderCalendar();
+  toast('Treino excluído.', 'success');
+}
 
 function workoutCardHTML(w) {
   const ex = w.exercises || [];
@@ -1495,6 +1686,8 @@ async function openWorkoutDetail(id) {
       <button class="btn btn-ghost" style="flex:1" onclick="copyWorkoutText(S.workouts.find(x=>x.id==='${id}'))">📋 Copiar</button>
       <button class="btn btn-primary" style="flex:1" onclick="repeatWorkout('${id}');closeModal('modal-workout')">🔁 Repetir</button>
     </div>
+    <div class="divider"></div>
+    <button class="btn btn-block mt4" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:var(--danger);font-size:13px" onclick="deleteWorkout('${id}')">🗑 Excluir treino</button>
     <button class="btn btn-ghost btn-block mt8" onclick="closeModal('modal-workout')">Fechar</button>
   `;
   openModal('modal-workout');
