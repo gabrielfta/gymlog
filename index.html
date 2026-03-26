@@ -868,7 +868,7 @@ input:checked+.slider:before{transform:translateX(20px)}
         <div class="section-title mb8">Por e-mail</div>
         <div class="flex gap8">
           <input type="email" id="invite-email-input" placeholder="aluno@email.com" style="flex:1">
-          <button class="btn btn-primary" onclick="sendEmailInvite()">Enviar</button>
+          <button class="btn btn-primary" onclick="sendEmailInvite()">Gerar link</button>
         </div>
       </div>
       <div class="divider"></div>
@@ -1073,6 +1073,9 @@ const S = {
   activeWorkout: null,    // workout being logged
   timerInterval: null,
   timerStart: null,
+  notifInterval: null,
+  _prCache: {},        // exerciseName.toLowerCase() → { best1RM, date } — histórico completo
+  _prCacheReady: false,
   currentEffort: 0,
   feedbackRating: 0,
   editingProgramId: null,
@@ -1282,6 +1285,8 @@ function applyMode() {
     loadWorkouts();
     loadMyTrainers();
     loadPrograms().then(() => renderTrainView());
+    // Restaura treino ativo se existir no localStorage (sobreviveu ao reload)
+    restoreActiveWorkout();
   }
 }
 
@@ -1697,6 +1702,11 @@ async function openWorkoutDetail(id) {
 // ACTIVE WORKOUT
 // ================================================================
 function openActiveWorkout(programDay=null) {
+  // Inicia carregamento do cache completo de PR em background (fire-and-forget)
+  // _prCacheReady é resetado para forçar nova query a cada treino
+  S._prCacheReady = false;
+  S._prCache = {};
+  loadFullPRCache();
   S.activeWorkout = {
     name: programDay?.label || 'Treino',
     exercises: programDay ? (programDay.exercises||[]).map(e => ({
@@ -1726,11 +1736,19 @@ function openActiveWorkout(programDay=null) {
   document.getElementById('view-active-workout').classList.add('open');
 }
 
-function startTimer() {
-  // Persiste no localStorage para sobreviver ao background/reload
-  localStorage.setItem('gl_timer_start', Date.now());
-  S.timerStart = Date.now();
-  S.lastSetTime = null;
+// resume=true: não sobrescreve gl_timer_start (para restore após reload)
+function startTimer(resume=false) {
+  if(!resume) {
+    // Início normal: registra novo timer start
+    localStorage.setItem('gl_timer_start', Date.now());
+    S.timerStart = Date.now();
+    S.lastSetTime = null;
+  } else {
+    // Resume: usa gl_timer_start existente ou startedAt do workout salvo
+    const existing = localStorage.getItem('gl_timer_start');
+    S.timerStart = existing ? parseInt(existing) : (S.activeWorkout?.startedAt || Date.now());
+    if(!existing) localStorage.setItem('gl_timer_start', S.timerStart);
+  }
 
   const tick = () => {
     const start = parseInt(localStorage.getItem('gl_timer_start') || S.timerStart);
@@ -1779,10 +1797,43 @@ function maximizeTimer() {
 function cancelWorkout() {
   if(!confirm('Cancelar treino? O progresso será perdido.')) return;
   stopTimer();
+  localStorage.removeItem('gl_active_workout');
   document.getElementById('view-active-workout').classList.remove('open');
   document.getElementById('timer-pill').classList.remove('show');
   document.getElementById('rest-display').classList.add('hide');
   S.activeWorkout = null;
+}
+
+// Restaura treino ativo salvo no localStorage após reload de página
+function restoreActiveWorkout() {
+  const raw = localStorage.getItem('gl_active_workout');
+  if(!raw || S.activeWorkout) return; // não sobrescreve treino em memória
+  try {
+    const saved = JSON.parse(raw);
+    if(!saved || !Array.isArray(saved.exercises)) return;
+    S.activeWorkout = saved;
+    // Configura UI idêntico ao openActiveWorkout()
+    document.getElementById('aw-name').value = S.activeWorkout.name || '';
+    const _n = S.activeWorkout.name || '';
+    const _isUpper = /upper|superior|empurrar|peito|ombro/i.test(_n);
+    const _isLower = /lower|inferior|perna|quad|agacha/i.test(_n);
+    const _badge = document.getElementById('aw-badge');
+    if(_badge) {
+      _badge.textContent = _isUpper ? 'UPPER' : _isLower ? 'LOWER' : 'LIVRE';
+      _badge.style.background = _isUpper ? 'var(--upper-color)' : _isLower ? 'var(--lower-color)' : 'var(--primary)';
+      _badge.style.color = 'var(--bg)';
+    }
+    renderActiveWorkout();
+    startTimer(true); // resume: preserva gl_timer_start original
+    document.getElementById('view-active-workout').classList.add('open');
+    document.getElementById('timer-pill').classList.add('show');
+    // Warm up PR cache em background para detecção correta
+    S._prCacheReady = false; S._prCache = {};
+    loadFullPRCache();
+    toast('Treino restaurado após reload ✓', 'success');
+  } catch(e) {
+    localStorage.removeItem('gl_active_workout'); // dado corrompido — limpa
+  }
 }
 
 function addExercise() {
@@ -1841,8 +1892,8 @@ function renderActiveWorkout() {
       const copyBtn = hasCargo && !isLast
         ? `<button class="copy-rem-btn" onclick="copyToRemaining(${ei},${si})" title="Copiar peso/reps para séries abaixo">↓ repetir</button>`
         : `<span style="min-width:54px;display:inline-block"></span>`;
-      const prBadge = s.is_pr ? `<span class="pr-auto">⭐ PR</span>` : '';
       const doneClass = s.done ? ' done' : '';
+      const rpeOpts = `<option value="">–</option>${Array.from({length:10},(_,i)=>`<option value="${i+1}"${s.rpe==i+1?' selected':''}>${i+1}</option>`).join('')}`;
       return `
         <tr>
           <td style="color:var(--muted);font-size:12px;font-weight:700;padding-left:8px">${si+1}</td>
@@ -1862,6 +1913,8 @@ function renderActiveWorkout() {
               <button class="stepper-btn" onclick="stepSet(${ei},${si},'reps',1)">+</button>
             </div>
           </td>
+          <td><select style="width:38px;padding:5px 2px;font-size:12px;background:var(--card2);border:1px solid var(--border);border-radius:6px;color:${s.rpe?'var(--primary)':'var(--muted)'};text-align:center"
+            onchange="updateSet(${ei},${si},'rpe',this.value)">${rpeOpts}</select></td>
           <td><select class="set-type-select ${s.type||'normal'}" onchange="setSetType(${ei},${si},this.value);this.className='set-type-select '+this.value">
             <option value="normal"${(s.type||'normal')==='normal'?' selected':''}>Normal</option>
             <option value="warmup"${s.type==='warmup'?' selected':''}>Aquec.</option>
@@ -1870,7 +1923,6 @@ function renderActiveWorkout() {
             <option value="drop"${s.type==='drop'?' selected':''}>Drop</option>
           </select></td>
           <td style="white-space:nowrap">
-            ${prBadge}
             <button class="set-done-btn${doneClass}" onclick="doneSet(${ei},${si})">${s.done?'✓':'✓'}</button>
           </td>
           <td style="white-space:nowrap">
@@ -1893,12 +1945,12 @@ function renderActiveWorkout() {
           <button class="move-btn" onclick="moveExercise(${ei},1)" ${ei===total-1?'disabled':''}>↓</button>
         </div>
         <input class="exercise-name-input" type="text" value="${esc(ex.name)}" placeholder="Nome do exercício"
-          data-ei="${ei}" oninput="S.activeWorkout.exercises[${ei}].name=this.value" autocomplete="off" style="margin:0 6px">
+          data-ei="${ei}" oninput="S.activeWorkout.exercises[${ei}].name=this.value;persistActiveWorkout()" autocomplete="off" style="margin:0 6px">
         <button class="btn btn-icon btn-ghost btn-sm" onclick="removeExercise(${ei})" style="border:none;color:var(--danger);flex-shrink:0">✕</button>
       </div>
       <table class="sets-table">
         <thead><tr>
-          <th style="width:28px">#</th><th>Peso</th><th>Reps</th><th>Tipo</th><th>✓</th><th></th>
+          <th style="width:28px">#</th><th>Peso</th><th>Reps</th><th style="width:38px">RPE</th><th>Tipo</th><th>✓</th><th></th>
         </tr></thead>
         <tbody>${setsHTML}</tbody>
       </table>
@@ -1911,18 +1963,20 @@ function renderActiveWorkout() {
         <div class="ex-extra-row">
           <div class="ex-extra-icon">📝</div>
           <textarea rows="2" placeholder="Suas observações..." style="font-size:13px;resize:none;flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);min-height:unset;font-family:inherit"
-            oninput="S.activeWorkout.exercises[${ei}].notes=this.value">${esc(ex.notes||'')}</textarea>
+            oninput="S.activeWorkout.exercises[${ei}].notes=this.value;persistActiveWorkout()">${esc(ex.notes||'')}</textarea>
         </div>
         <div class="ex-extra-row">
           <div class="ex-extra-icon">🔗</div>
           <input class="ex-link-input" type="url" placeholder="Link YouTube do exercício"
-            value="${esc(ex.youtube||'')}" oninput="S.activeWorkout.exercises[${ei}].youtube=this.value"
+            value="${esc(ex.youtube||'')}" oninput="S.activeWorkout.exercises[${ei}].youtube=this.value;persistActiveWorkout()"
             style="flex:1">
           ${ex.youtube ? `<a href="${esc(ex.youtube)}" target="_blank" style="font-size:20px;text-decoration:none;padding-left:6px">▶</a>` : ''}
         </div>
       </div>
     </div>`;
   }).join('');
+  // Persiste estado após qualquer re-render (cobre a maioria das mutações)
+  persistActiveWorkout();
 }
 
 function stepSet(ei, si, field, delta) {
@@ -1936,6 +1990,7 @@ function stepSet(ei, si, field, delta) {
 function setSetType(ei, si, type) {
   S.activeWorkout.exercises[ei].sets[si].type = type;
   // No re-render needed — select handles its own visual state
+  persistActiveWorkout();
 }
 
 function updateSet(ei, si, field, val) {
@@ -1947,14 +2002,54 @@ function updateSet(ei, si, field, val) {
     s.loggedAt = Date.now();
     S.lastSetTime = Date.now();
   }
+  // Persist explícito: updateSet nem sempre dispara renderActiveWorkout
+  persistActiveWorkout();
 }
 
-// 1RM estimate using Epley formula: w * (1 + reps/30)
+/// 1RM estimate using Epley formula: w * (1 + reps/30)
 function calc1RM(weight, reps) {
   const w = parseFloat(weight) || 0;
   const r = parseInt(reps) || 1;
   if(!w) return 0;
   return w * (1 + r / 30);
+}
+
+// Persiste o estado do treino ativo no localStorage para sobreviver a reloads
+function persistActiveWorkout() {
+  if(S.activeWorkout) {
+    localStorage.setItem('gl_active_workout', JSON.stringify(S.activeWorkout));
+  }
+}
+
+// Carrega o histórico completo de PR de todos os treinos do usuário (via Supabase).
+// Resultado armazenado em S._prCache: { exerciseName → { best1RM, date } }
+// Chamado em openActiveWorkout() (fire-and-forget) e aguardado em confirmFinishWorkout().
+async function loadFullPRCache() {
+  if(S._prCacheReady || !S.user) return;
+  const { data, error } = await db.from('workouts')
+    .select('id,date,exercises')
+    .eq('user_id', S.user.id);
+  if(error) return; // falha silenciosa — checkPR continua usando S.workouts como fallback
+  S._prCache = {};
+  (data || []).forEach(w => {
+    (w.exercises || []).forEach(e => {
+      const key = (e.name || '').toLowerCase().trim();
+      if(!key) return;
+      (e.sets || []).forEach(s => {
+        const e1 = calc1RM(s.weight, s.reps);
+        if(e1 > (S._prCache[key]?.best1RM || 0)) {
+          S._prCache[key] = { best1RM: e1, date: w.date };
+        }
+      });
+    });
+  });
+  S._prCacheReady = true;
+  // Reavalia PR de todas as séries do treino ativo com dados completos
+  if(S.activeWorkout) {
+    S.activeWorkout.exercises.forEach((ex, ei) => {
+      ex.sets.forEach((_, si) => checkPR(ei, si));
+    });
+  }
 }
 
 function checkPR(ei, si) {
@@ -1964,18 +2059,24 @@ function checkPR(ei, si) {
   if(!est1RM) return;
   const exName = ex.name.toLowerCase().trim();
   if(!exName) return;
-  // Best historical 1RM for this exercise
+
+  // Melhor 1RM histórico: usa cache completo (DB) se disponível, fallback para S.workouts
   let maxHist1RM = 0;
-  S.workouts.forEach(w => {
-    (w.exercises||[]).forEach(e => {
-      if((e.name||'').toLowerCase().trim()===exName) {
-        (e.sets||[]).forEach(hs => {
-          const e1 = calc1RM(hs.weight, hs.reps);
-          if(e1 > maxHist1RM) maxHist1RM = e1;
-        });
-      }
+  if(S._prCacheReady) {
+    maxHist1RM = S._prCache[exName]?.best1RM || 0;
+  } else {
+    S.workouts.forEach(w => {
+      (w.exercises||[]).forEach(e => {
+        if((e.name||'').toLowerCase().trim()===exName) {
+          (e.sets||[]).forEach(hs => {
+            const e1 = calc1RM(hs.weight, hs.reps);
+            if(e1 > maxHist1RM) maxHist1RM = e1;
+          });
+        }
+      });
     });
-  });
+  }
+
   // Best 1RM in current workout (other sets of same exercise)
   let maxCurrent1RM = 0;
   ex.sets.forEach((hs, i) => {
@@ -2137,6 +2238,12 @@ async function confirmFinishWorkout() {
     S.activeWorkout.bodyweight = document.getElementById('finish-bodyweight').value;
     S.activeWorkout.notes = document.getElementById('finish-notes').value.trim();
 
+    // Garante que o cache completo de PR está carregado antes de salvar is_pr por série
+    await loadFullPRCache();
+    S.activeWorkout.exercises.forEach((ex, ei) => {
+      ex.sets.forEach((_, si) => checkPR(ei, si));
+    });
+
     // Clean exercises (strip sensation/youtube from set data, keep in exercise)
     const exercises = S.activeWorkout.exercises
       .filter(e => (e.name||'').trim())
@@ -2188,6 +2295,7 @@ async function confirmFinishWorkout() {
     const saveTemplate = document.getElementById('finish-save-template')?.checked;
     if(saveTemplate) await saveWorkoutAsTemplate(data);
 
+    localStorage.removeItem('gl_active_workout');
     closeModal('modal-finish');
     document.getElementById('view-active-workout').classList.remove('open');
     document.getElementById('timer-pill').classList.remove('show');
@@ -2519,10 +2627,17 @@ async function submitFeedback() {
 // ================================================================
 // INVITE
 // ================================================================
-async function openInviteModal() {
+function openInviteModal() {
   openModal('modal-invite');
   document.getElementById('invite-email-input').value = '';
-  // Generate invite link
+  // Exibe botão — link só é gerado quando o treinador clicar explicitamente
+  document.getElementById('invite-link-display').innerHTML =
+    `<button class="btn btn-ghost btn-sm btn-block" onclick="gerarLinkConvite()">Gerar link</button>`;
+}
+
+// Gera o link de convite genérico (sem e-mail associado) apenas quando solicitado
+async function gerarLinkConvite() {
+  document.getElementById('invite-link-display').textContent = 'Gerando link…';
   const token = crypto.randomUUID();
   const expires = new Date(); expires.setDate(expires.getDate()+7);
   const { error } = await db.from('trainer_student_links').insert({
@@ -2545,6 +2660,8 @@ async function openInviteModal() {
     <button class="copy-btn" onclick="copyToClipboard('${link}')">Copiar</button>`;
 }
 
+// Gera link de convite associado ao e-mail informado.
+// Não envia e-mail automaticamente — o treinador copia o link e envia manualmente.
 async function sendEmailInvite() {
   const email = document.getElementById('invite-email-input').value.trim();
   if(!email) { toast('Digite o e-mail do aluno.','error'); return; }
@@ -3337,7 +3454,8 @@ function startLibraryDay(pi, di) {
     name: e.name,
     notes: e.notes || '',
     sets: Array.from({length: parseInt(e.sets)||3}, () => ({
-      weight: '', reps: e.reps||'', rpe: '', is_pr: false, type: 'normal', loggedAt: null
+      // reps deixado em branco: valor planejado (ex: '8-12') é guia, não reps real
+      weight: '', reps: '', rpe: '', is_pr: false, type: 'normal', loggedAt: null
     }))
   }));
   const label = `${p.name} — ${day.label}`;
@@ -3432,7 +3550,8 @@ function startProgramDay(progId, di) {
     name: e.name,
     notes: e.notes || '',
     sets: Array.from({length: parseInt(e.sets)||3}, () => ({
-      weight: '', reps: e.reps||'', rpe: '', is_pr: false, type: 'normal', loggedAt: null
+      // reps deixado em branco: valor planejado (ex: '8-12') é guia, não reps real
+      weight: '', reps: '', rpe: '', is_pr: false, type: 'normal', loggedAt: null
     }))
   }));
   const label = `${p.name} — ${day.label||`Dia ${di+1}`}`;
@@ -3444,12 +3563,43 @@ function startProgramDay(progId, di) {
 // ================================================================
 function showSummary(w) {
   const ex = w.exercises || [];
-  const prs = ex.flatMap(e => (e.sets||[]).filter(s=>s.is_pr).map(s=>({name:e.name,weight:s.weight,reps:s.reps})));
   const totalSets = ex.reduce((a,e)=>a+(e.sets||[]).length,0);
   const topWeights = ex.map(e=>{
     const maxW = Math.max(...(e.sets||[]).map(s=>parseFloat(s.weight)||0));
     return {name:e.name, maxW};
   }).filter(e=>e.maxW>0);
+
+  // PR detection: compare current workout 1RM vs historical (exclude current workout by id)
+  function _1rm(weight, reps) { const ww=parseFloat(weight)||0; const rr=parseInt(reps)||1; return ww>0 ? ww*(1+rr/30) : 0; }
+  const history = S.workouts.filter(h => h.id !== w.id);
+  const prs = ex.map(e => {
+    const exName = (e.name||'').toLowerCase().trim();
+    if(!exName) return null;
+    const cur1RM = Math.max(0, ...(e.sets||[]).map(s => _1rm(s.weight, s.reps)));
+    if(!cur1RM) return null;
+    let bestHist1RM = 0, bestHistDate = null;
+    // Usa cache completo (DB) se disponível — mais preciso que S.workouts paginado
+    if(S._prCacheReady && S._prCache[exName]) {
+      bestHist1RM = S._prCache[exName].best1RM || 0;
+      bestHistDate = S._prCache[exName].date || null;
+    } else {
+      history.forEach(hw => {
+        (hw.exercises||[]).forEach(he => {
+          if((he.name||'').toLowerCase().trim() === exName) {
+            (he.sets||[]).forEach(s => {
+              const e1 = _1rm(s.weight, s.reps);
+              if(e1 > bestHist1RM) { bestHist1RM = e1; bestHistDate = hw.date; }
+            });
+          }
+        });
+      });
+    }
+    if(cur1RM > bestHist1RM) {
+      const bestSet = (e.sets||[]).reduce((b,s) => _1rm(s.weight,s.reps) > _1rm(b.weight,b.reps) ? s : b, {weight:0,reps:0});
+      return { name: e.name, weight: bestSet.weight, reps: bestSet.reps, prevDate: bestHistDate };
+    }
+    return null;
+  }).filter(Boolean);
 
   document.getElementById('summary-body').innerHTML = `
     <div class="text-center mb16">
@@ -3463,8 +3613,11 @@ function showSummary(w) {
       <div class="stat-card"><div class="stat-val">${w.duration||0}</div><div class="stat-label">Minutos</div></div>
     </div>
     ${prs.length ? `<div class="section-title">🏆 Records pessoais</div>
-      <div class="flex wrap gap8 mb16">
-        ${prs.map(p=>`<span class="summary-pr-badge">⭐ ${esc(p.name)} ${p.weight}kg</span>`).join('')}
+      <div class="flex col gap8 mb16">
+        ${prs.map(p=>`<div class="summary-pr-badge" style="display:flex;justify-content:space-between;align-items:center;padding:8px 14px">
+          <span>⭐ ${esc(p.name)}</span>
+          <span>${p.weight}kg × ${p.reps} reps${p.prevDate ? `<span class="muted" style="font-size:11px;margin-left:6px">(ant: ${formatDate(p.prevDate)})</span>` : '<span class="muted" style="font-size:11px;margin-left:6px">(1º registro)</span>'}</span>
+        </div>`).join('')}
       </div>` : ''}
     <div class="section-title">Exercícios</div>
     <div class="card mb16">
@@ -3829,8 +3982,9 @@ async function init() {
       showApp();
       await processPendingInvite();
       loadNotifications();
-      // Refresh notifications every 30s
-      setInterval(loadNotifications, 30000);
+      // Refresh notifications every 30s — referência armazenada para clearInterval no logout
+      if(S.notifInterval) clearInterval(S.notifInterval);
+      S.notifInterval = setInterval(loadNotifications, 30000);
     }
   } else {
     document.getElementById('view-auth').classList.add('active');
@@ -3849,9 +4003,14 @@ async function init() {
         showApp();
         await processPendingInvite();
         loadNotifications();
+        // Reinicia polling ao fazer login (ex: logout → login sem refresh)
+        if(S.notifInterval) clearInterval(S.notifInterval);
+        S.notifInterval = setInterval(loadNotifications, 30000);
       }
     }
     if(event==='SIGNED_OUT') {
+      // Para polling de notificações antes de limpar a sessão
+      if(S.notifInterval) { clearInterval(S.notifInterval); S.notifInterval = null; }
       document.getElementById('header').classList.add('hide');
       document.getElementById('main').classList.add('hide');
       document.getElementById('bottom-nav').classList.add('hide');
