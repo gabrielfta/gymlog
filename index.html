@@ -944,7 +944,7 @@ input:checked+.slider:before{transform:translateX(20px)}
       <div id="prog-days"></div>
       <button class="btn btn-ghost btn-sm" onclick="addProgramDay()">+ Adicionar dia</button>
       <div class="divider"></div>
-      <button class="btn btn-primary btn-block" onclick="saveProgram()">Salvar programa</button>
+      <button id="btn-save-program" class="btn btn-primary btn-block" onclick="saveProgram()">Salvar programa</button>
       <button class="btn btn-ghost btn-block" onclick="closeModal('modal-program')">Cancelar</button>
     </div>
   </div>
@@ -1826,7 +1826,8 @@ function restoreActiveWorkout() {
     renderActiveWorkout();
     startTimer(true); // resume: preserva gl_timer_start original
     document.getElementById('view-active-workout').classList.add('open');
-    document.getElementById('timer-pill').classList.add('show');
+    // timer-pill é mostrado apenas quando o treino está minimizado, não quando está aberto
+    document.getElementById('timer-pill').classList.remove('show');
     // Warm up PR cache em background para detecção correta
     S._prCacheReady = false; S._prCache = {};
     loadFullPRCache();
@@ -2754,25 +2755,41 @@ function addProgramExercise(di) { S.programDays[di].exercises.push({name:'',sets
 function removeProgramExercise(di,ei) { S.programDays[di].exercises.splice(ei,1); renderProgramDays(); }
 
 async function saveProgram() {
-  const name = document.getElementById('prog-name').value.trim();
-  if(!name) { toast('Nome do programa é obrigatório.','error'); return; }
-  const payload = {
-    created_by: S.user.id,
-    name, objective: document.getElementById('prog-objective').value.trim(),
-    description: document.getElementById('prog-desc').value.trim(),
-    days: S.programDays,
-    updated_at: new Date().toISOString()
-  };
-  let error;
-  if(S.editingProgramId) {
-    ({error} = await db.from('workout_programs').update(payload).eq('id',S.editingProgramId));
-  } else {
-    ({error} = await db.from('workout_programs').insert(payload));
+  const btn = document.getElementById('btn-save-program');
+  if(btn?.disabled) return; // double-submit guard
+  if(btn) { btn.disabled = true; btn.textContent = 'Salvando...'; }
+
+  try {
+    if(!S.user) throw new Error('Sessão expirada. Faça login novamente.');
+    const name = document.getElementById('prog-name').value.trim();
+    if(!name) { toast('Nome do programa é obrigatório.','error'); return; }
+
+    const basePayload = {
+      name,
+      objective: document.getElementById('prog-objective').value.trim(),
+      description: document.getElementById('prog-desc').value.trim(),
+      days: S.programDays,
+      updated_at: new Date().toISOString()
+    };
+
+    let error;
+    if(S.editingProgramId) {
+      // Don't send created_by in UPDATE — unnecessary and may conflict with RLS
+      ({error} = await db.from('workout_programs').update(basePayload).eq('id', S.editingProgramId));
+    } else {
+      ({error} = await db.from('workout_programs').insert({ ...basePayload, created_by: S.user.id }));
+    }
+    if(error) throw new Error(error.message);
+
+    await loadPrograms();
+    closeModal('modal-program');
+    toast('Programa salvo! ✓','success');
+  } catch(err) {
+    console.error('saveProgram error:', err);
+    toast('Erro ao salvar: ' + err.message, 'error');
+  } finally {
+    if(btn) { btn.disabled = false; btn.textContent = 'Salvar programa'; }
   }
-  if(error) { toast('Erro: '+error.message,'error'); return; }
-  await loadPrograms();
-  closeModal('modal-program');
-  toast('Programa salvo! ✓','success');
 }
 
 // Assign program to student
