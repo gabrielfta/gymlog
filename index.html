@@ -63,7 +63,7 @@ body{display:flex;flex-direction:column;max-width:480px;margin:0 auto;position:r
 .text-center{text-align:center}
 
 /* ===== BUTTONS ===== */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px 20px;border-radius:var(--rs);border:none;cursor:pointer;font-size:15px;font-weight:700;transition:opacity var(--trans),transform var(--trans);user-select:none;text-transform:uppercase;letter-spacing:.03em}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px 20px;border-radius:var(--rs);border:none;cursor:pointer;font-size:15px;font-weight:700;transition:opacity var(--trans),transform var(--trans);user-select:none;text-transform:uppercase;letter-spacing:.03em;touch-action:manipulation}
 .btn:active{opacity:.8;transform:scale(.98)}
 .btn:disabled{opacity:.4;cursor:default}
 .btn-primary{background:var(--primary);color:var(--primary-txt)}
@@ -213,8 +213,9 @@ textarea{resize:vertical;min-height:80px}
 .set-input:focus{outline:none;border-color:var(--primary)}
 .pr-indicator{color:var(--pr);font-size:11px;font-weight:700}
 .rpe-select{background:var(--card2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;padding:5px 2px}
-.del-set-btn{background:none;border:none;cursor:pointer;color:var(--danger);padding:4px;opacity:.6}
+.del-set-btn{background:none;border:none;cursor:pointer;color:var(--danger);padding:8px 10px;opacity:.8;font-size:15px;touch-action:manipulation;line-height:1}
 .del-set-btn:hover{opacity:1}
+.sets-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .add-set-row{padding:8px 14px;display:flex;justify-content:center}
 .add-ex-row{padding:12px 16px;border-top:1px solid var(--border)}
 
@@ -1715,7 +1716,10 @@ function openActiveWorkout(programDay=null) {
       instructions: e.notes || '', // program notes become coach instructions
       youtube: e.youtube || '',
       sensation: '',
-      sets: Array.from({length: parseInt(e.sets)||3}, () => ({weight:'',reps:e.reps||'',rpe:'',is_pr:false,type:'normal',done:false}))
+      // Se sets já é array (ex: repeatWorkout), usa direto; se é número (programDay), constrói séries
+      sets: Array.isArray(e.sets)
+        ? e.sets.map(s => ({...s, is_pr: false, done: s.done || false}))
+        : Array.from({length: parseInt(e.sets)||3}, () => ({weight:'',reps:e.reps||'',rpe:'',is_pr:false,type:'normal',done:false}))
     })) : [],
     startedAt: Date.now(),
     effort: 0, bodyweight:'', notes:''
@@ -1734,6 +1738,10 @@ function openActiveWorkout(programDay=null) {
   renderActiveWorkout();
   startTimer();
   document.getElementById('view-active-workout').classList.add('open');
+  // Fire-and-forget: carrega cargas do último treino e re-renderiza
+  if(programDay && S.user) {
+    prefillLastWeights(S.activeWorkout.exercises).then(() => renderActiveWorkout());
+  }
 }
 
 // resume=true: não sobrescreve gl_timer_start (para restore após reload)
@@ -1897,7 +1905,8 @@ function renderActiveWorkout() {
       const rpeOpts = `<option value="">–</option>${Array.from({length:10},(_,i)=>`<option value="${i+1}"${s.rpe==i+1?' selected':''}>${i+1}</option>`).join('')}`;
       return `
         <tr>
-          <td style="color:var(--muted);font-size:12px;font-weight:700;padding-left:8px">${si+1}</td>
+          <td><button class="del-set-btn" onclick="removeSet(${ei},${si})" title="Remover série">✕</button></td>
+          <td style="color:var(--muted);font-size:12px;font-weight:700;padding-left:4px">${si+1}</td>
           <td>
             <div class="stepper">
               <button class="stepper-btn" onclick="stepSet(${ei},${si},'weight',-0.5)">−</button>
@@ -1925,10 +1934,7 @@ function renderActiveWorkout() {
           </select></td>
           <td style="white-space:nowrap">
             <button class="set-done-btn${doneClass}" onclick="doneSet(${ei},${si})">${s.done?'✓':'✓'}</button>
-          </td>
-          <td style="white-space:nowrap">
             ${copyBtn}
-            <button class="del-set-btn" onclick="removeSet(${ei},${si})">✕</button>
           </td>
         </tr>`;
     }).join('');
@@ -1949,12 +1955,14 @@ function renderActiveWorkout() {
           data-ei="${ei}" oninput="S.activeWorkout.exercises[${ei}].name=this.value;persistActiveWorkout()" autocomplete="off" style="margin:0 6px">
         <button class="btn btn-icon btn-ghost btn-sm" onclick="removeExercise(${ei})" style="border:none;color:var(--danger);flex-shrink:0">✕</button>
       </div>
+      <div class="sets-scroll">
       <table class="sets-table">
         <thead><tr>
-          <th style="width:28px">#</th><th>Peso</th><th>Reps</th><th style="width:38px">RPE</th><th>Tipo</th><th>✓</th><th></th>
+          <th style="width:32px"></th><th style="width:28px">#</th><th>Peso</th><th>Reps</th><th style="width:38px">RPE</th><th>Tipo</th><th>✓</th>
         </tr></thead>
         <tbody>${setsHTML}</tbody>
       </table>
+      </div>
       <div class="add-set-row">
         <button class="btn btn-ghost btn-sm" onclick="addSet(${ei})">+ Série</button>
       </div>
@@ -2051,6 +2059,36 @@ async function loadFullPRCache() {
       ex.sets.forEach((_, si) => checkPR(ei, si));
     });
   }
+}
+
+// Pré-preenche cargas do último treino em que cada exercício foi realizado
+async function prefillLastWeights(exercises) {
+  if(!S.user || !exercises.length) return;
+  const { data } = await db.from('workouts')
+    .select('date, exercises')
+    .eq('user_id', S.user.id)
+    .order('date', { ascending: false })
+    .limit(30);
+  if(!data?.length) return;
+  let changed = false;
+  exercises.forEach(ex => {
+    const exName = (ex.name || '').toLowerCase().trim();
+    if(!exName) return;
+    // Encontra o treino mais recente com este exercício e com cargas registradas
+    for(const w of data) {
+      const match = (w.exercises || []).find(e =>
+        (e.name || '').toLowerCase().trim() === exName
+      );
+      if(match && (match.sets || []).some(s => parseFloat(s.weight) > 0)) {
+        ex.sets.forEach((s, si) => {
+          if(s.weight) return; // não sobrescreve carga já definida
+          const lastSet = match.sets[si] || match.sets[match.sets.length - 1];
+          if(lastSet?.weight) { s.weight = lastSet.weight; changed = true; }
+        });
+        break; // encontrou o mais recente — para
+      }
+    }
+  });
 }
 
 function checkPR(ei, si) {
@@ -3467,13 +3505,13 @@ function openProgramDetail(pi) {
 function startLibraryDay(pi, di) {
   const p = PUBLIC_PROGRAMS[pi];
   const day = p.days[di];
+  // Passa dados brutos — openActiveWorkout monta as séries corretamente
   const exercises = day.exercises.map(e => ({
     name: e.name,
     notes: e.notes || '',
-    sets: Array.from({length: parseInt(e.sets)||3}, () => ({
-      // reps deixado em branco: valor planejado (ex: '8-12') é guia, não reps real
-      weight: '', reps: '', rpe: '', is_pr: false, type: 'normal', loggedAt: null
-    }))
+    youtube: e.youtube || '',
+    sets: parseInt(e.sets) || 3, // número, não array
+    reps: e.reps || '',
   }));
   const label = `${p.name} — ${day.label}`;
   closeModal('modal-program-detail');
@@ -3563,13 +3601,13 @@ function startProgramDay(progId, di) {
   if(!p) return;
   const day = (p.days||[])[di];
   if(!day) return;
+  // Passa dados brutos — openActiveWorkout monta as séries corretamente
   const exercises = (day.exercises||[]).map(e => ({
     name: e.name,
-    notes: e.notes || '',
-    sets: Array.from({length: parseInt(e.sets)||3}, () => ({
-      // reps deixado em branco: valor planejado (ex: '8-12') é guia, não reps real
-      weight: '', reps: '', rpe: '', is_pr: false, type: 'normal', loggedAt: null
-    }))
+    notes: e.notes || '',    // vira instructions no openActiveWorkout
+    youtube: e.youtube || '',
+    sets: parseInt(e.sets) || 3, // número, não array — preserva contagem correta
+    reps: e.reps || '',          // reps planejadas (ex: '6-10')
   }));
   const label = `${p.name} — ${day.label||`Dia ${di+1}`}`;
   confirmStartWorkout(label, exercises, `${exercises.length} exercícios · ${(day.exercises||[]).reduce((a,e)=>a+(parseInt(e.sets)||3),0)} séries planejadas`);
