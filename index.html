@@ -216,6 +216,10 @@ textarea{resize:vertical;min-height:80px}
 .del-set-btn{background:none;border:none;cursor:pointer;color:var(--danger);padding:8px 10px;opacity:.8;font-size:15px;touch-action:manipulation;line-height:1}
 .del-set-btn:hover{opacity:1}
 .sets-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.last-session-bar{padding:4px 14px 6px;font-size:11px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;border-bottom:1px solid var(--border);background:var(--card2)}
+.last-session-label{font-weight:700;color:var(--primary);font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-right:2px}
+.last-session-set{background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:11px;white-space:nowrap}
+tr.next-set td{background:rgba(99,102,241,.07)}
 .add-set-row{padding:8px 14px;display:flex;justify-content:center}
 .add-ex-row{padding:12px 16px;border-top:1px solid var(--border)}
 
@@ -988,6 +992,9 @@ input:checked+.slider:before{transform:translateX(20px)}
       <div class="modal-title" style="margin-bottom:4px" id="confirm-start-title">Iniciar treino?</div>
       <div class="muted small" id="confirm-start-subtitle"></div>
     </div>
+    <div id="confirm-start-warning" style="display:none;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#ef4444;font-size:13px;padding:10px 14px;border-radius:8px;margin-bottom:8px;text-align:left">
+      ⚠️ <strong>Treino em andamento.</strong> Iniciar agora descartará o progresso não salvo.
+    </div>
     <div class="flex col gap8">
       <button class="btn btn-primary btn-block" id="confirm-start-btn">▶ Iniciar agora</button>
       <button class="btn btn-ghost btn-block" onclick="closeModal('modal-confirm-start')">Cancelar</button>
@@ -1077,6 +1084,7 @@ const S = {
   notifInterval: null,
   _prCache: {},        // exerciseName.toLowerCase() → { best1RM, date } — histórico completo
   _prCacheReady: false,
+  _lastSetsCache: {},  // exerciseName.toLowerCase() → [{weight,reps,rpe}] da última sessão
   currentEffort: 0,
   feedbackRating: 0,
   editingProgramId: null,
@@ -1736,7 +1744,9 @@ function openActiveWorkout(programDay=null) {
     _badge.style.color = 'var(--bg)';
   }
   renderActiveWorkout();
-  startTimer();
+  // Timer só inicia ao marcar a primeira série como feita (doneSet chama startTimer)
+  const timerEl = document.getElementById('aw-timer');
+  if(timerEl) timerEl.textContent = '--:--';
   document.getElementById('view-active-workout').classList.add('open');
   // Fire-and-forget: carrega cargas do último treino e re-renderiza
   if(programDay && S.user) {
@@ -1895,16 +1905,27 @@ function renderActiveWorkout() {
       {v:'falha', label:'🔴 Falha'},
     ].map(b => `<button class="sensation-btn${sen===b.v?' sel-'+b.v:''}" onclick="setExSensation(${ei},'${b.v}')">${b.label}</button>`).join('');
 
+    // Barra de histórico da última sessão
+    const exKey = (ex.name || '').toLowerCase().trim();
+    const lastSets = S._lastSetsCache?.[exKey];
+    const lastSessionBar = lastSets?.length
+      ? `<div class="last-session-bar"><span class="last-session-label">↩ Último</span>${lastSets.slice(0,5).map((s,i)=>`<span class="last-session-set">S${i+1}: ${s.weight||'?'}kg×${s.reps||'?'}${s.rpe?' @'+s.rpe:''}</span>`).join('')}</div>`
+      : '';
+
+    // Índice da próxima série não concluída (para highlight UX)
+    const nextSetIdx = ex.sets.findIndex(ss => !ss.done);
+
     const setsHTML = ex.sets.map((s, si) => {
       const hasCargo = s.weight && s.reps;
       const isLast = si === ex.sets.length - 1;
+      const isNextSet = si === nextSetIdx; // highlight UX — próxima série a fazer
       const copyBtn = hasCargo && !isLast
         ? `<button class="copy-rem-btn" onclick="copyToRemaining(${ei},${si})" title="Copiar peso/reps para séries abaixo">↓ repetir</button>`
         : `<span style="min-width:54px;display:inline-block"></span>`;
       const doneClass = s.done ? ' done' : '';
       const rpeOpts = `<option value="">–</option>${Array.from({length:10},(_,i)=>`<option value="${i+1}"${s.rpe==i+1?' selected':''}>${i+1}</option>`).join('')}`;
       return `
-        <tr>
+        <tr class="${isNextSet ? 'next-set' : ''}">
           <td><button class="del-set-btn" onclick="removeSet(${ei},${si})" title="Remover série">✕</button></td>
           <td style="color:var(--muted);font-size:12px;font-weight:700;padding-left:4px">${si+1}</td>
           <td>
@@ -1955,6 +1976,7 @@ function renderActiveWorkout() {
           data-ei="${ei}" oninput="S.activeWorkout.exercises[${ei}].name=this.value;persistActiveWorkout()" autocomplete="off" style="margin:0 6px">
         <button class="btn btn-icon btn-ghost btn-sm" onclick="removeExercise(${ei})" style="border:none;color:var(--danger);flex-shrink:0">✕</button>
       </div>
+      ${lastSessionBar}
       <div class="sets-scroll">
       <table class="sets-table">
         <thead><tr>
@@ -2061,16 +2083,16 @@ async function loadFullPRCache() {
   }
 }
 
-// Pré-preenche cargas do último treino em que cada exercício foi realizado
+// Pré-preenche cargas do último treino e popula _lastSetsCache para exibição inline
 async function prefillLastWeights(exercises) {
   if(!S.user || !exercises.length) return;
+  S._lastSetsCache = {}; // reseta cache
   const { data } = await db.from('workouts')
     .select('date, exercises')
     .eq('user_id', S.user.id)
     .order('date', { ascending: false })
     .limit(30);
   if(!data?.length) return;
-  let changed = false;
   exercises.forEach(ex => {
     const exName = (ex.name || '').toLowerCase().trim();
     if(!exName) return;
@@ -2080,11 +2102,14 @@ async function prefillLastWeights(exercises) {
         (e.name || '').toLowerCase().trim() === exName
       );
       if(match && (match.sets || []).some(s => parseFloat(s.weight) > 0)) {
+        // Pré-preenche cargas nas séries atuais
         ex.sets.forEach((s, si) => {
           if(s.weight) return; // não sobrescreve carga já definida
           const lastSet = match.sets[si] || match.sets[match.sets.length - 1];
-          if(lastSet?.weight) { s.weight = lastSet.weight; changed = true; }
+          if(lastSet?.weight) s.weight = lastSet.weight;
         });
+        // Cacheia séries do último treino para exibição
+        S._lastSetsCache[exName] = (match.sets || []).filter(s => s.weight || s.reps);
         break; // encontrou o mais recente — para
       }
     }
@@ -2143,6 +2168,8 @@ function doneSet(ei, si) {
   s.done = !s.done;
   s.loggedAt = s.done ? Date.now() : null;
   S.lastSetTime = Date.now();
+  // Inicia o timer de duração na primeira série marcada como feita
+  if(s.done && !S.timerInterval) startTimer();
   checkPR(ei, si);
   renderActiveWorkout();
   if(s.done) startRestCountdown(90); // default 90s rest
@@ -2267,9 +2294,11 @@ function setEffort(v) {
 async function confirmFinishWorkout() {
   // Disable button to prevent double-submit
   const btn = document.getElementById('btn-confirm-finish');
+  if(btn?.disabled) return; // guard extra contra double-submit em Safari
   if(btn) { btn.disabled = true; btn.textContent = 'Salvando...'; }
 
   try {
+    if(!S.user) throw new Error('Sessão expirada. Faça login novamente.');
     const duration = stopTimer();
     skipRest(); // hide rest countdown if open
     S.activeWorkout.name = document.getElementById('aw-name').value.trim() || 'Treino';
@@ -3580,6 +3609,12 @@ function renderPrograms() {
 function confirmStartWorkout(label, exercises, subtitle) {
   document.getElementById('confirm-start-title').textContent = label;
   document.getElementById('confirm-start-subtitle').textContent = subtitle || `${exercises.length} exercício${exercises.length!==1?'s':''}`;
+  // Aviso se já houver treino em andamento com dados registrados
+  const hasActiveData = S.activeWorkout && (S.activeWorkout.exercises || []).some(e =>
+    (e.sets || []).some(s => s.weight || s.reps || s.done)
+  );
+  const warnEl = document.getElementById('confirm-start-warning');
+  if(warnEl) warnEl.style.display = hasActiveData ? '' : 'none';
   document.getElementById('confirm-start-btn').onclick = () => {
     closeModal('modal-confirm-start');
     openActiveWorkout({ label, exercises });
